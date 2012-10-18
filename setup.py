@@ -19,7 +19,7 @@ ShortDescription = Summary
 
 needed = [
     'sphinx', # for docs generation.
-    'evasion-common',
+    'python-dateutil'
 ]
 
 test_needed = [

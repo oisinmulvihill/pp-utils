@@ -1,4 +1,5 @@
 build
+.settings
 dist
 .coverage
 syntax: glob
