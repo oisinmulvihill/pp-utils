@@ -25,4 +25,27 @@ class DateRange(object):
     def __repr__(self):
         return "<DateRange {}--{}>".format(self.start, self.end)
 
+    def to_dict(self):
+        """Convert to a JSON representation of this instance.
+
+        :returns: A dict
+
+        E.g.::
+            {
+                "interval": <interval value>,
+                "start": <ISO Format> or "",
+                "end": <ISO Format> or "",
+            }
+
+        """
+        start = self.start.isoformat() if self.start else ""
+
+        end = self.end.isoformat() if self.end else ""
+
+        return dict(
+            interval=self.interval,
+            start=start,
+            end=end,
+        )
+
     __slots__ = ['start', 'end', 'interval']
