@@ -48,4 +48,10 @@ class DateRange(object):
             end=end,
         )
 
+    def minutes(self):
+        """
+        Number of full minutes in this date range
+        """
+        return int((self.end - self.start).seconds) / 60
+
     __slots__ = ['start', 'end', 'interval']
