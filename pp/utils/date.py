@@ -35,6 +35,12 @@ class FuzzyTimeReference(TimeReference):
     pass
 
 
+class Duration(TimeReference):
+    def __init__(self, minutes=None, hours=None, days=None):
+        self.duration = (((days or 0) * 24 * 60) + ((hours or 0) * 60) +
+                         (minutes or 0))
+
+
 class RepeatingTimeReference(TimeReference):
     def __init__(self, start_at, duration, period,
                  stop_at=None):
@@ -44,6 +50,7 @@ class RepeatingTimeReference(TimeReference):
         self.period = period
 
 
+# TODO: think about relative dates (datutil.relativedelta)
 class DateRange(TimeReference):
     """
     Date range representation.
