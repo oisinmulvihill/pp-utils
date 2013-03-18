@@ -5,6 +5,9 @@ Created on Oct 18, 2012
 
 @author: eeaston
 '''
+import time
+from datetime import timedelta
+
 import dateutil.parser
 
 CLOSED_CLOSED = 0
@@ -93,3 +96,22 @@ class DateRange(TimeReference):
         return int((self.end - self.start).seconds) / 60
 
     __slots__ = ['start', 'end', 'interval']
+
+
+def next_recurrance(start_date, frequency, dt):
+    """ Returns the next recurrence of a recurring slot after a given datetime
+
+    Parameters
+    ----------
+    start_date: `datetime`
+        Series start
+    frequency: int
+        Recurrence frequency in minutes
+    dt: `datetime`
+        Datetime after which we want the next recurrence
+
+    """
+    seconds_since_seq_start = (time.mktime(dt.timetuple()) -
+                               time.mktime(start_date.timetuple()))
+    return (start_date +
+            timedelta(seconds=(seconds_since_seq_start % (frequency * 60))))
