@@ -28,6 +28,13 @@ class TimeReference(object):
     def __init__(self):
         pass
 
+    # TODO: find a way to use 'in', eg 'if dt in timeref..'
+    #       Look @ pkg_resources version parser
+    def match(self, dt):
+        """ True if a given datetime matches the time reference
+        """
+        raise NotImplemented
+
 
 class PointInTime(TimeReference):
     def __init__(self, point):
@@ -94,6 +101,21 @@ class DateRange(TimeReference):
         Number of full minutes in this date range
         """
         return int((self.end - self.start).seconds) / 60
+
+    def match(self, dt):
+        """ True if this datetime is contained within this date range
+        """
+        logic_map = {
+            CLOSED_CLOSED: ((self.start is None or dt >= self.start) and
+                            (self.end is None or dt <= self.end)),
+            CLOSED_OPEN: ((self.start is None or dt >= self.start) and
+                          (self.end is None or dt < self.end)),
+            OPEN_CLOSED: ((self.start is None or dt > self.start) and
+                          (self.end is None or dt <= self.end)),
+            OPEN_OPEN: ((self.start is None or dt > self.start) and
+                        (self.end is None or dt < self.end)),
+        }
+        return logic_map[self.interval]
 
     __slots__ = ['start', 'end', 'interval']
 
