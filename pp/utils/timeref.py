@@ -52,12 +52,53 @@ class Duration(TimeReference):
 
 
 class RepeatingTimeReference(TimeReference):
-    def __init__(self, start_at, duration, period,
-                 stop_at=None):
-        self.start_at = start_at
-        self.stop_at = stop_at
-        self.duration = duration
-        self.period = period
+    def __init__(self, start, frequency,
+                 end_after_time=None, end_after_repeat=None):
+        """ Repeating series of times or time slots.
+
+        Parameters
+        ----------
+        start: `TimeReference`
+            Series start
+        frequency: int
+            Recurrence frequency in minutes
+        end_after_time: `TimeRef`
+            Series ends after this time reference
+        end_after_repeat: `int`
+            Series ends after this many recurrences
+        """
+        self.start = start
+        self.frequency = frequency
+        self.end_after_time = end_after_time
+        self.end_after_repeat = end_after_repeat
+
+    def next_after(self, dt):
+        """ Returns the next recurrence of the series after a given datetime
+
+        Parameters
+        ----------
+        dt: `datetime`
+            Datetime after which we want the next recurrence
+
+        Explanation::
+
+            [start_date .... r0 ...... r1 ...... rn-1 .. dt .. rn]
+                             [ f = freq ]                       ^
+            [ ---- s = seconds since seq start ----------]      |
+                                                 [ s % f ]      |
+                                                                |
+                                                       rn = dt + f - (s % f)
+        """
+        if dt < self.start:
+            return self.start
+        if self.end_after_time and dt > self.end_after_time:
+            return None
+        f = self.frequency * 60
+        s = (time.mktime(dt.timetuple()) -
+             time.mktime(self.start.timetuple()))
+        if self.end_after_repeat and (s - s % f) / f >= self.end_after_repeat:
+            return None
+        return dt + timedelta(seconds=f - s % f)
 
 
 # TODO: think about relative dates (datutil.relativedelta)
@@ -120,20 +161,3 @@ class DateRange(TimeReference):
     __slots__ = ['start', 'end', 'interval']
 
 
-def next_recurrance(start_date, frequency, dt):
-    """ Returns the next recurrence of a recurring slot after a given datetime
-
-    Parameters
-    ----------
-    start_date: `datetime`
-        Series start
-    frequency: int
-        Recurrence frequency in minutes
-    dt: `datetime`
-        Datetime after which we want the next recurrence
-
-    """
-    seconds_since_seq_start = (time.mktime(dt.timetuple()) -
-                               time.mktime(start_date.timetuple()))
-    return (start_date +
-            timedelta(seconds=(seconds_since_seq_start % (frequency * 60))))
