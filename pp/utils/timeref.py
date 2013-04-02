@@ -6,7 +6,7 @@ Created on Oct 18, 2012
 @author: eeaston
 '''
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 import dateutil.parser
 
@@ -35,10 +35,17 @@ class TimeReference(object):
         """
         raise NotImplemented
 
+    def dt(self, thing):
+        if thing:
+            if isinstance(thing, datetime):
+                return thing
+            return dateutil.parser.parse(thing)
+        return None
+
 
 class PointInTime(TimeReference):
     def __init__(self, point):
-        self.point = dateutil.parser.parse(point)
+        self.point = self.dt(point)
 
 
 class FuzzyTimeReference(TimeReference):
@@ -107,34 +114,35 @@ class DateRange(TimeReference):
     Date range representation.
     """
     def __init__(self, start=None, end=None, interval=CLOSED_OPEN):
-        self.start = dateutil.parser.parse(start) if start else None
-        self.end = dateutil.parser.parse(end) if end else None
+        self.start = self.dt(start)
+        self.end = self.dt(end)
         self.interval = interval
 
     def __repr__(self):
         return "<DateRange {}--{}>".format(self.start, self.end)
 
-    def to_dict(self):
+    def __json__(self, request):
         """Convert to a JSON representation of this instance.
 
-        :returns: A dict
+        Returns
+        -------
+        A natively json-serializable object
 
         E.g.::
             {
                 "interval": <interval value>,
-                "start": <ISO Format> or "",
-                "end": <ISO Format> or "",
+                "start": <ISO Format> or None,
+                "end": <ISO Format> or None,
             }
 
         """
-        start = self.start.isoformat() if self.start else ""
-
-        end = self.end.isoformat() if self.end else ""
-
+        #start = self.start.isoformat() if self.start else None
+        #end = self.end.isoformat() if self.end else None
         return dict(
+            timeref_type="daterange",
             interval=self.interval,
-            start=start,
-            end=end,
+            start=self.start,
+            end=self.end,
         )
 
     def minutes(self):
