@@ -42,6 +42,12 @@ class TimeReference(object):
             return dateutil.parser.parse(thing)
         return None
 
+    @classmethod
+    def fromJSON(cls, data):
+        """ Convert from JSON dict to an instance
+        """
+        return SERIALISE_CLASS_LOOKUP[data['timeref_type']].fromJSON(data)
+
 
 class PointInTime(TimeReference):
     def __init__(self, point):
@@ -145,6 +151,14 @@ class DateRange(TimeReference):
             end=self.end,
         )
 
+    @classmethod
+    def fromJSON(cls, data):
+        """ Convert from JSON dict to an instance
+        """
+        return cls(start=data['start'],
+                   end=data['end'],
+                   interval=data['interval'])
+
     def minutes(self):
         """
         Number of full minutes in this date range
@@ -169,3 +183,6 @@ class DateRange(TimeReference):
     __slots__ = ['start', 'end', 'interval']
 
 
+SERIALISE_CLASS_LOOKUP = {
+    'daterange': DateRange,
+}
