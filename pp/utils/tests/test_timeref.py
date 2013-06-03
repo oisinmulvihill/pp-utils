@@ -25,6 +25,21 @@ def test_daterange_constructor():
     assert dr.end == datetime(2011, 10, 9)
 
 
+def test_daterange_minutes():
+    dr = DateRange('20010101', '20010102')
+    assert dr.minutes == 60 * 24
+
+
+def test_daterange_minutes_zero():
+    dr = DateRange('20010101', '20010101')
+    assert dr.minutes == 0
+
+
+def test_daterange_minutes_negative():
+    dr = DateRange('20010102', '20010101')
+    assert dr.minutes == -60 * 24
+
+
 @pytest.mark.parametrize(('start_date', 'freq', 'dt', 'expected'), [
     # 10 min freq
     (dt("2013-01-01 09:00"), 10, dt("2013-01-01 09:53"),
