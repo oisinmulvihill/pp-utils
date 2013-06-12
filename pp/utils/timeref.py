@@ -127,7 +127,7 @@ class DateRange(TimeReference):
     def __repr__(self):
         return "<DateRange {}--{}>".format(self.start, self.end)
 
-    def __json__(self, request):
+    def __json__(self, request=None):
         """Convert to a JSON representation of this instance.
 
         Returns
@@ -142,8 +142,8 @@ class DateRange(TimeReference):
             }
 
         """
-        #start = self.start.isoformat() if self.start else None
-        #end = self.end.isoformat() if self.end else None
+        # start = self.start.isoformat() if self.start else None
+        # end = self.end.isoformat() if self.end else None
         return dict(
             timeref_type="daterange",
             interval=self.interval,
@@ -159,11 +159,12 @@ class DateRange(TimeReference):
                    end=data['end'],
                    interval=data['interval'])
 
+    @property
     def minutes(self):
         """
         Number of full minutes in this date range
         """
-        return int((self.end - self.start).seconds) / 60
+        return int((self.end - self.start).total_seconds()) / 60
 
     def match(self, dt):
         """ True if this datetime is contained within this date range
