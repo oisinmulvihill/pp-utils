@@ -60,7 +60,7 @@ class FuzzyTimeReference(TimeReference):
 
 class Duration(TimeReference):
     def __init__(self, minutes=None, hours=None, days=None):
-        self.duration = (((days or 0) * 24 * 60) + ((hours or 0) * 60) +
+        self.minutes = (((days or 0) * 24 * 60) + ((hours or 0) * 60) +
                          (minutes or 0))
 
 
@@ -126,6 +126,11 @@ class DateRange(TimeReference):
 
     def __repr__(self):
         return "<DateRange {}--{}>".format(self.start, self.end)
+
+    def __eq__(self, other):
+        return (self.start == other.start and
+                self.end == other.end and
+                self.interval == other.interval)
 
     def __json__(self, request=None):
         """Convert to a JSON representation of this instance.
