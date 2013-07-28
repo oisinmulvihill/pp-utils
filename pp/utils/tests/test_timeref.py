@@ -7,6 +7,17 @@ import pytest
 from pp.utils.timeref import DateRange, RepeatingTimeReference
 
 
+def test_daterange_dict_from_range():
+    tr = DateRange.dict_from_range(
+        start="2012-10-01T09:30:05",
+        end="2012-10-01T10:20:05",
+    )
+    assert tr['start'] == "2012-10-01T09:30:05"
+    assert tr['end'] == "2012-10-01T10:20:05"
+    assert tr['interval'] == 0
+    assert tr['timeref_type'] == 'daterange'
+
+
 def test_daterange_constructor_empty():
     dr = DateRange()
     assert dr.start is None
@@ -72,4 +83,3 @@ def test_repeating_end_after_repeat():
     assert rr.next_after(dt("2013-01-01 09:19")) == dt("2013-01-01 09:20")
     assert rr.next_after(dt("2013-01-01 09:20")) is None
     assert rr.next_after(dt("2013-01-01 09:21")) is None
-

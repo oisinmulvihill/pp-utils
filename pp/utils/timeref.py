@@ -60,8 +60,11 @@ class FuzzyTimeReference(TimeReference):
 
 class Duration(TimeReference):
     def __init__(self, minutes=None, hours=None, days=None):
-        self.minutes = (((days or 0) * 24 * 60) + ((hours or 0) * 60) +
-                         (minutes or 0))
+        self.minutes = (
+            ((days or 0) * 24 * 60) +
+            ((hours or 0) * 60) +
+            (minutes or 0)
+        )
 
 
 class RepeatingTimeReference(TimeReference):
@@ -128,9 +131,13 @@ class DateRange(TimeReference):
         return "<DateRange {}--{}>".format(self.start, self.end)
 
     def __eq__(self, other):
-        return (self.start == other.start and
-                self.end == other.end and
-                self.interval == other.interval)
+        # if other is an empty string it can't be equal
+        rc = other and (
+            self.start == other.start and
+            self.end == other.end and
+            self.interval == other.interval
+        )
+        return rc
 
     def __json__(self, request=None):
         """Convert to a JSON representation of this instance.
@@ -152,8 +159,8 @@ class DateRange(TimeReference):
         return dict(
             timeref_type="daterange",
             interval=self.interval,
-            start=self.start,
-            end=self.end,
+            start=self.start.isoformat(),
+            end=self.end.isoformat(),
         )
 
     @classmethod
@@ -163,6 +170,18 @@ class DateRange(TimeReference):
         return cls(start=data['start'],
                    end=data['end'],
                    interval=data['interval'])
+
+    @classmethod
+    def dict_from_range(cls, start, end, interval=CLOSED_CLOSED):
+        """Create a dict structure (from DateRange instance) for a given start,
+        end & optional interval.
+
+        The default interval if not given is CLOSED_CLOSED.
+
+        This is used to work with mongo and testing.
+
+        """
+        return cls(start=start, end=end, interval=interval).__json__()
 
     @property
     def minutes(self):
