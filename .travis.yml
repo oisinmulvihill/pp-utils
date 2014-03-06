@@ -3,9 +3,19 @@ language: python
 python:
   - "2.7"
 
+branches:
+  only:
+    - master
+
+env:
+    - PKGLIB=/tmp/pkglin.ini
+
+pre_install:
+    - echo "" > /tmp/pkglin.ini
+
 install:
   - pip install https://github.com/ahlmss/pkglib/archive/master.zip
   - pip install https://github.com/pythonpro-dev/pp-pkglib/archive/master.zip
-  - python setup.py install
+  - python setup.py develop
 
 script: python setup.py test
