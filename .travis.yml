@@ -8,14 +8,12 @@ branches:
     - master
 
 env:
-    - PKGLIB=/tmp/pkglin.ini
+    - PKGLIB=/tmp/pkglinb.ini
 
 pre_install:
     - echo "" > /tmp/pkglin.ini
 
 install:
-  - pip install https://github.com/ahlmss/pkglib/archive/master.zip
-  - pip install https://github.com/pythonpro-dev/pp-pkglib/archive/master.zip
-  - python setup.py develop
+  - pip install -r travisci-reqs.txt
 
 script: python setup.py test
