@@ -27,6 +27,10 @@ e.g. a PythonPro ID for a security could be
     pp-sec-voda-7bfec1a5d6b84703af918bee93000606
 """
 
+# ------------------------------------------------------------------------
+# Name shortening, for greater ID readability
+# ------------------------------------------------------------------------
+
 # Supply a list of common words to be ignored in making a symbol
 hihat_stop_words = [
     "company",
@@ -40,6 +44,7 @@ hihat_stop_words = [
     "ltd",
 ]
 
+
 # Supply a dictionary of known abbreviations that will be supplied,
 # instead of the rule-based compression.
 hihat_known_abbreviations = dict(
@@ -48,10 +53,11 @@ hihat_known_abbreviations = dict(
     microsoft="msft",
 )
 
+# TO-DO: Force known_abbreviations into lower case
+# TO-DO: Multiple characters from multiple words
 
 def hihat(long_name, short_name_length=4,
           stop_words=None, known_abbreviations=None):
-    # TO-DO
     """Reduce a long name to a short symbol, to make it easier to
     recognise in a generated uuid. Very short names are padded with 'x'/
 
@@ -61,11 +67,11 @@ def hihat(long_name, short_name_length=4,
     The stop words are those that add nothing to the meaning of the name.
     Known abbreviations can be supplied.
 
-    Pun warning: symbol --> cymbal --> hihat.
+    Pun warning! symbol --> cymbal --> hihat.
     """
     if not stop_words:
         stop_words = set(hihat_stop_words)
-    # TO-DO: Force known_abbreviations into lower case
+
     if not known_abbreviations:
         known_abbreviations = hihat_known_abbreviations
 
@@ -96,14 +102,16 @@ def hihat(long_name, short_name_length=4,
         chars = chars + ['x'] * short_name_length
         return ''.join(chars)[:short_name_length]
 
+# ------------------------------------------------------------------------
+# Generator-based number persistence for ID generation
+# ------------------------------------------------------------------------
 
-def num_counter(prefix, start_at, name_length, separator):
+def _num_counter(prefix, start_at, name_length, separator):
     """Use a coroutine for storing state between calls. So if numbers
     are required, they can be sequential.
     """
-##    yield None
     counter = start_at
-    name_or_number = yield None
+    name_or_number = yield "Ignore this first result"
     while True:
         # yield a value and receive a new one. See PEP 342
         # other = yield foo
@@ -132,25 +140,24 @@ def num_counter(prefix, start_at, name_length, separator):
 
 
 def id_generator(prefix, start_at=1, name_length=6, separator='-'):
-    ctr = num_counter(prefix, start_at, name_length, separator)
-    next(ctr)
-    return ctr.send
+    """Wrapper for generator, to get while loop started, throwing
+    away the first result.
+    Return the generator's send method, which must take one argument.
+    """
+    counter_gen = _num_counter(prefix, start_at, name_length, separator)
+    ignored_first_result = next(counter_gen)
+    return counter_gen.send
 
+# ------------------------------------------------------------------------
+# base64 handling to compress UUID string from 36 to 22 characters
+# ------------------------------------------------------------------------
 
 def uuid2slug(uuidstring):
     """Convert 36-char UUID to 22-char base64 string, changing
     "+" to "$" and "/" to "_".
-    See
-        http://stackoverflow.com/questions/12270852/
-               convert-uuid-32-character-hex-string-into-a-youtube-
-               style-short-id-and-back
-"""
+    """
     uuid_bytes = uuid.UUID(uuidstring).bytes
     return base64.b64encode(uuid_bytes, '$_').rstrip('=\n')
-
-##    raw_slug = uuid.UUID(uuidstring).bytes.encode('base64')
-##
-##    return raw_slug.rstrip('=\n').replace('+', '$').replace('/', '_')
 
 
 def slug2uuid(slug):
@@ -161,43 +168,17 @@ def slug2uuid(slug):
     uuid_bytes = base64.b64decode(slug + '==', '$_')
     return str(uuid.UUID(bytes=uuid_bytes))
 
-    raw_slug = (slug + '==').replace('_', '/').replace('$', '+')
-    return str(uuid.UUID(bytes=raw_slug.decode('base64')))
-
 
 def uuid_base64():
     """Generate a UUID, as a 22-char string"""
     return uuid2slug(uuid.uuid4().hex)
 
 
-
-if __name__ == '__main__':
+if __name__ == '__main__': #pragma nocover
     print("Starting...\n")
 
-##    u = str(uuid.uuid4())
-##    print(u)
-##    s = uuid2slug(u)
-##    print(s)
-##    u2 = slug2uuid(s)
-##    assert u2 == u
-    # Set random seed, so random uuids are repeatable
-##    random.seed(123)
-
-    id_gen_usr = id_generator('rd-usr', start_at=345)
+    id_gen_usr = id_generator('pp-usr', start_at=345)
     for val in [0, 5001, 0, "John Smith", 0, 201, 0, "Vodafone", 0, 0]:
         print("{:>12} --> {}".format(val, id_gen_usr(val)))
-
-    import base64
-    base64.urlsafe_b64encode
-
-##    id_gen = id_generator('rd', 'sec', 101)
-##    for num, txt in enumerate(["", None, "one", "two", 103,
-##                               "", None, "", "four"]):
-##        print('{:3}:   "{:6}" --> "{}"'.format(num, txt, id_gen(txt)))
-
-##    long_name = 'Robert Paul Collins'
-##    short_name_length = 12
-##    res = hihat(long_name, short_name_length)
-##    print("{} --> {}".format(long_name, res))
 
     print("\nFinished.")

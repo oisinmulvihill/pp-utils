@@ -89,41 +89,40 @@ def test_uuid_base64():
     # Check that equivalent UUID is valid by converting string
     valid_uuid = uuid.UUID(u4)
 
-##@pytest.fixture
-##def id_gen_sec():
-##    return idm.id_generator('pp-sec', start_at=10001)
-##
-##
-##@pytest.fixture
-##def id_gen_user():
-##    return idm.id_generator('pp-usr', start_at=101)
 
-id_gen_usr = None
-
-def setup_module(module):
-    """ setup any state specific to the execution of the given module."""
-    global id_gen_usr
-    id_gen_usr = idm.id_generator('pp-usr', start_at=101)
+@pytest.fixture(scope='module')
+def id_gen_sec():
+    return idm.id_generator('pp-sec', start_at=10001)
 
 
-def teardown_module(module):
-    """ teardown any state that was previously setup with a setup_module
-    method.
-    """
+@pytest.fixture(scope='module')
+def id_gen_usr():
+    return idm.id_generator('pp-usr', start_at=101)
+
 
 @mark.parametrize('arg1, start_of_id', [
     (0, 'pp-usr-000101-'),
     (5001, 'pp-usr-005001-'),
     (0, 'pp-usr-005002-'),
     ("John Smith", 'pp-usr-johnsm'),
-    (0, 'pp-usr-005003'),
+    (0, 'pp-usr-005003-'),
 ])
-def test_get_user_ids(arg1, start_of_id):
-##    id_gen_usr = id_gen_user()
+def test_get_user_ids(arg1, start_of_id, id_gen_usr):
     user_id = id_gen_usr(arg1)
     assert user_id.startswith(start_of_id)
     assert len(user_id) == 36
-#5001, 0, "John Smith", 0, 201, 0, "Vodafone", 0, 0
+
+
+@mark.parametrize('arg1, start_of_id', [
+    (6001, 'pp-sec-006001-'),
+    (0, 'pp-sec-006002-'),
+    ("Lloyds Bank", 'pp-sec-lloyds'),
+    (0, 'pp-sec-006003-'),
+])
+def test_get_security_ids(arg1, start_of_id, id_gen_sec):
+    sec_id = id_gen_sec(arg1)
+    assert sec_id.startswith(start_of_id)
+    assert len(sec_id) == 36
 
 
 def test_get_sequential_id():
@@ -131,7 +130,11 @@ def test_get_sequential_id():
 
 if __name__ == '__main__':
     print("Starting...\n")
-##    test_hihat_with_known_abbrevs()
-    setup_module(None)
-    test_get_user_ids(0, 'pp-usr-000101-')
+
+    id_gen_usr = idm.id_generator('pp-usr', start_at=101)
+    print(id_gen_usr(0))
+    print(id_gen_usr(5001))
+    print(id_gen_usr(0))
+
+##    test_get_user_ids(0, 'pp-usr-000101-')
     print("\nFinished.")
