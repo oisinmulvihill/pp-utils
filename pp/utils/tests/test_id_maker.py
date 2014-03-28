@@ -11,16 +11,59 @@ from pytest import mark
 import pp.utils.id_maker as idm
 
 
-def test_base_id():
-    # Check that the callable is callable
-    assert idm.ID()() == 99
+@mark.parametrize('long_name, short_name_length, expected_abbrev', [
+    ("Vodafone", 6, "vodafn"),
+    ("Vodafone", 4, "voda"),
+    ("Vodafone", 10, "vodafnxxxx"),
+    ("Vodafone", 1, "v"),
+])
+def test_hihat_with_default_stop_words_and_abbrs(long_name,
+                                                 short_name_length,
+                                                 expected_abbrev):
+    assert idm.hihat(long_name, short_name_length) == expected_abbrev
+
+
+def test_hihat_with_stop_words():
+    stop_words = [
+        "company",
+        "corporation",
+      #  "inc",
+        "incorporated",
+        "international",
+        "limited",
+      #  "ltd",
+    ]
+    assert idm.hihat("Lloyds Bank Ltd", 4,
+                     stop_words=None) == 'lloy'
+    assert idm.hihat("Lloyds Bank Ltd", 4,
+                     stop_words=stop_words) == 'lblx'
+
+
+@mark.parametrize('abbrevs, long_name, expected_abbrev', [
+    (False, "Microsoft", "msft"),
+    (True, "Microsoft", "micr"),
+    (False, "Cisco", "cisc"),
+    (True, "Cisco", "csco"),
+])
+def test_hihat_with_known_abbrevs(abbrevs, long_name, expected_abbrev):
+    known_abbrevs = dict(
+        exxon="xon",
+        cisco="csco",
+        jpmorgan="jpm",
+    )
+    if abbrevs:
+        assert idm.hihat(long_name, 4,
+                         known_abbreviations=known_abbrevs
+                         ) == expected_abbrev
+    else:
+        assert idm.hihat(long_name, 4) == expected_abbrev
 
 
 @mark.parametrize('uuid_str, slug', [
     ('aab4aa8d-0624-47c6-aa61-22d09ee426cc', 'qrSqjQYkR8aqYSLQnuQmzA'),
-    ('158b7e0c-3826-4827-a2ab-8314a14b9d0e', 'FYt-DDgmSCeiq4MUoUudDg'),
+    ('158b7e0c-3826-4827-a2ab-8314a14b9d0e', 'FYt$DDgmSCeiq4MUoUudDg'),
     ('56a4f614-fb4b-4e80-909c-797f969adf9b', 'VqT2FPtLToCQnHl_lprfmw'),
-    ('904ff1c0-7108-485f-8339-19d8bd2e843e', 'kE_xwHEISF-DORnYvS6EPg'),
+    ('904ff1c0-7108-485f-8339-19d8bd2e843e', 'kE_xwHEISF$DORnYvS6EPg'),
 ])
 def test_uuid_string_to_base_64_string(uuid_str, slug):
     assert idm.uuid2slug(uuid_str) == slug
@@ -46,10 +89,49 @@ def test_uuid_base64():
     # Check that equivalent UUID is valid by converting string
     valid_uuid = uuid.UUID(u4)
 
+##@pytest.fixture
+##def id_gen_sec():
+##    return idm.id_generator('pp-sec', start_at=10001)
+##
+##
+##@pytest.fixture
+##def id_gen_user():
+##    return idm.id_generator('pp-usr', start_at=101)
 
-def test_get_id_by_name():
-    pass
+id_gen_usr = None
+
+def setup_module(module):
+    """ setup any state specific to the execution of the given module."""
+    global id_gen_usr
+    id_gen_usr = idm.id_generator('pp-usr', start_at=101)
+
+
+def teardown_module(module):
+    """ teardown any state that was previously setup with a setup_module
+    method.
+    """
+
+@mark.parametrize('arg1, start_of_id', [
+    (0, 'pp-usr-000101-'),
+    (5001, 'pp-usr-005001-'),
+    (0, 'pp-usr-005002-'),
+    ("John Smith", 'pp-usr-johnsm'),
+    (0, 'pp-usr-005003'),
+])
+def test_get_user_ids(arg1, start_of_id):
+##    id_gen_usr = id_gen_user()
+    user_id = id_gen_usr(arg1)
+    assert user_id.startswith(start_of_id)
+    assert len(user_id) == 36
+#5001, 0, "John Smith", 0, 201, 0, "Vodafone", 0, 0
 
 
 def test_get_sequential_id():
     pass
+
+if __name__ == '__main__':
+    print("Starting...\n")
+##    test_hihat_with_known_abbrevs()
+    setup_module(None)
+    test_get_user_ids(0, 'pp-usr-000101-')
+    print("\nFinished.")
