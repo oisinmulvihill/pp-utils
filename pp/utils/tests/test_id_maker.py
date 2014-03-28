@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 # src/pp-utils/pp/utils/tests/test_id_maker.py
 
-##from datetime import datetime
 import uuid
 
-##from dateutil.parser import parse as dt
 import pytest
 from pytest import mark
 

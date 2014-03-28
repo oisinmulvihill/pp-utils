@@ -4,7 +4,6 @@
 import uuid
 import base64
 import re
-##import random
 
 # Looking for words, with possible embedded ' and _
 re_split_words = re.compile(r"[\w'_]+")
@@ -113,11 +112,6 @@ def _num_counter(prefix, start_at, name_length, separator):
     counter = start_at
     name_or_number = yield "Ignore this first result"
     while True:
-        # yield a value and receive a new one. See PEP 342
-        # other = yield foo
-        # "yield foo and, when a value is sent to me,
-        # set other to that value."
-        #incoming_sent_value_ignored = yield value
         if name_or_number:
             try:
                 # Check for non-zero integer input
