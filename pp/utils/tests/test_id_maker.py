@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 # src/pp-utils/pp/utils/tests/test_id_maker.py
 
+from __future__ import absolute_import
+
 import uuid
 
 import pytest
 from pytest import mark
 
 import pp.utils.id_maker as idm
+
+# Tests TO-DO
+# Apache --> apache, not apachx
 
 
 @mark.parametrize('long_name, short_name_length, expected_abbrev', [

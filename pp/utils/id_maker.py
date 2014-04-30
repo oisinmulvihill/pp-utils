@@ -24,6 +24,11 @@ a company prefix, and an abbreviation for the object type.
 e.g. a PythonPro ID for a security could be
     pp-sec-3445-8d14e54304de464497153f44a4088f98
     pp-sec-voda-7bfec1a5d6b84703af918bee93000606
+
+TO-DO: Enforce abbreviation length
+e.g. "rd_id": "rd-org-aapl-D_SiWViwRxqSid0aqgWMBw"
+should be
+     "rd_id": "rd-org-aaplxx-D_SiWViwRxqSid0aqgWMBw"
 """
 
 # ------------------------------------------------------------------------
@@ -32,17 +37,66 @@ e.g. a PythonPro ID for a security could be
 
 # Supply a list of common words to be ignored in making a symbol
 hihat_stop_words = [
+    "&",
+    "ab",
+    "ad",   # ? TO-DO
+    "ag",
+    "as",   # ? TO-DO
+    "bhd",
+    "bv",   # ? TO-DO
+    "co",
     "company",
     "corp",
     "corporation",
+    "dd",   # ? TO-DO
+    "de",
+    "fund",
+    "gmbh",
+    "group",
+    "holding",
     "holdings",
     "inc",
     "incorporated",
     "international",
+    "jsc",   # ? TO-DO
     "limited",
+    "llc",
+    "lp",   # ? TO-DO
     "ltd",
+    "mba",
+    "no",   # For number
+    "nv",   # ? TO-DO
+    "oao",   # ? TO-DO
+    "of",
+    "plc",
+    "qsc",
+    "sa",    # ? TO-DO
+    "sae",   # ? TO-DO
+    "sas",   # ? TO-DO
+    "sarl",  # ? TO-DO
 ]
+stop_words_set = set(hihat_stop_words)
 
+import jellyfish as jf
+
+
+def process_stop_words(text):
+    result = []
+    words = text.split()
+    for word in words:
+        lower_word = word.lower()
+        if lower_word.isdigit():
+            result.append(lower_word)
+        else:
+            if word and not word.lower() in stop_words_set:
+                result.append(jf.metaphone(lower_word))
+    return ' '.join(result)
+
+
+def remove_stop_words(text):
+    words = text.split()
+    return ' '.join(word.lower() for word in words
+                    if word and not word.lower() in stop_words_set)
 
 # Supply a dictionary of known abbreviations that will be supplied,
 # instead of the rule-based compression.
