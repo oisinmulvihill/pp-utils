@@ -221,6 +221,14 @@ def uuid_base64():
     """Generate a UUID, as a 22-char string"""
     return uuid2slug(uuid.uuid4().hex)
 
+def get_id_counter(some_id):
+    """Hack to extract id counter number"""
+    try:
+        return int(some_id.split('-')[2:3][0])
+    except ValueError:
+        # Counter is a word, not a string number
+        return -1
+
 
 if __name__ == '__main__': #pragma nocover
     print("Starting...\n")
