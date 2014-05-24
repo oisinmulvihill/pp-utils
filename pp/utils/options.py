@@ -37,22 +37,48 @@ class OptionLineError(Exception):
 
 class OptionsList(object):
 
-    def __init__(self, text):
-        # Enforce single trailing new line
-        self._source_text = text.strip() + "\n"
+    def __init__(self, source_text="", max_line_length=60):
+        self.max_line_length = max_line_length
         self.lines = []
         self.keys = {}
         self.options = {}  # This is a reverse dictionary of self.keys
-        self.parse_lines()
+        self.parse_text(source_text)
 
-    @property
-    def text(self):
-        return self.format_text()
+    def format_text(self, max_line_length=None):
+        """Prepare text for output in standard format. This is a public
+        function, to allow for various output max_line_lengths.
+        """
+        if max_line_length is None:
+            max_line_length = self.max_line_length
+        lines_out = []
+        max_key_length = max(len(key) for key in self.keys.keys())
+        # Allow 3 chars for " : " in between key and options
+        max_option_length = max_line_length - max_key_length - 3
+        for line in self.lines:
+            if not line or line.startswith('#'):
+                lines_out.append(line)
+            else:
+                key, option_str = line.split(':')
+                continuation_lines = []
+                if len(option_str) > max_option_length:
+                    lines = self._split_options(option_str,
+                                                max_option_length)
+                    option_str = lines[0]
+                    continuation_lines = lines[1:]
+                new_line = "{1:{0}} : {2}".format(max_key_length,
+                                                  key, option_str)
+                lines_out.append(new_line)
+                for cont_line in continuation_lines:
+                    new_line2 = "{1:{0}}   {2}".format(max_key_length,
+                                                      "", cont_line)
+                    lines_out.append(new_line2)
+        return "\n".join(lines_out) + "\n"
 
-    def parse_lines(self):
+    def parse_text(self, source_text):
+        self._clear_data()
+        self.source_text = source_text.strip()
         source_lines_gen = (line.strip()
-                            for line in self._source_text.splitlines())
-        self.lines = []
+                            for line in self.source_text.splitlines())
         buffer_lines = None
         for line in source_lines_gen:
             if line.startswith('|'):
@@ -61,9 +87,18 @@ class OptionsList(object):
                 buffer_lines.append(line)
             else:
                 # Current is non-continuation line, so process buffer_line
-                self.process_buffer(buffer_lines)
+                self._process_buffer(buffer_lines)
                 buffer_lines = [line]
-        self.process_buffer(buffer_lines)
+        self._process_buffer(buffer_lines)
+
+    @property
+    def text(self):
+        return self.format_text()
+
+    def _clear_data(self):
+        self.lines = []
+        self.keys = {}
+        self.options = {}  # This is a reverse dictionary of self.keys
 
     def _parse_line(self, line):
         try:
@@ -74,7 +109,7 @@ class OptionsList(object):
         options = set(z.strip() for z in opts.split('|'))
         return key, options
 
-    def process_buffer(self, buffer_lines):
+    def _process_buffer(self, buffer_lines):
         if buffer_lines is None:
             # First time called
             return
@@ -97,17 +132,24 @@ class OptionsList(object):
             option_str = " | ".join(sorted(options))
             self.lines.append("{}:{}".format(key, option_str))
 
-    def format_text(self):
-        """Prepare text for output in standard format.
-        """
-        lines_out = []
-        max_key_length = max(len(key) for key in self.keys.keys())
-        for line in self.lines:
-            if not line or line.startswith('#'):
-                lines_out.append(line)
+    def _split_options(self, option_str, max_line_length):
+        """Split options into multiple strings to deal with long lists"""
+##        option_str = 'a | b | c | dd | e | f | g | h | iiii'
+        option_gen = (opt.strip() for opt in option_str.split('|'))
+        current_line = []
+        current_length = 0
+        lines = []
+        for opt in option_gen:
+##            print("+++ {} +++".format(opt))
+            if current_length + len(opt) <= max_line_length:
+                current_line.append(opt)
+                current_length += len(opt)
+##                print current_line, current_length
             else:
-                key, options = line.split(':')
-                new_line = "{1:{0}} : {2}".format(max_key_length,
-                                                  key, options)
-                lines_out.append(new_line)
-        return "\n".join(lines_out) + "\n"
+                lines.append(' | '.join(current_line))
+                current_line = ['| ' + opt]  # Note leading '|'
+                current_length = len(opt)
+        if current_line:
+            lines.append(' | '.join(current_line))
+        return lines
+
