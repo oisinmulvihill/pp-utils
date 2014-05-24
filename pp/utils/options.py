@@ -101,18 +101,24 @@ class OptionsList(object):
         self.options = {}  # This is a reverse dictionary of self.keys
 
     def _parse_line(self, line):
+        """Expecting one key word before the colon, and options after.
+        Ignore duplicate or blank options.
+        """
         try:
             key, opts = (x.strip() for x in line.split(':', 1))
+            if len(key.split()) != 1:
+                msg = 'Bad key "{}" in line "{}"'
+                raise OptionLineError(msg.format(key, line))
         except ValueError:
             msg = 'One ":" needed in line "{}"'
             raise OptionLineError(msg.format(line))
-        options = set(z.strip() for z in opts.split('|'))
+        #
+        options = set(z.strip() for z in opts.split('|') if len(z.strip()))
         return key, options
 
     def _process_buffer(self, buffer_lines):
         if buffer_lines is None:
-            # First time called
-            return
+            return  # First time called
         line = ''.join(buffer_lines)
         # Pass through blank lines and comments
         if not line or line.startswith('#'):
@@ -134,17 +140,14 @@ class OptionsList(object):
 
     def _split_options(self, option_str, max_line_length):
         """Split options into multiple strings to deal with long lists"""
-##        option_str = 'a | b | c | dd | e | f | g | h | iiii'
         option_gen = (opt.strip() for opt in option_str.split('|'))
         current_line = []
         current_length = 0
         lines = []
         for opt in option_gen:
-##            print("+++ {} +++".format(opt))
             if current_length + len(opt) <= max_line_length:
                 current_line.append(opt)
                 current_length += len(opt)
-##                print current_line, current_length
             else:
                 lines.append(' | '.join(current_line))
                 current_line = ['| ' + opt]  # Note leading '|'

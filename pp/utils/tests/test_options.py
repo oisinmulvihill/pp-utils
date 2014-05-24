@@ -13,11 +13,6 @@ def _get_text(lines):
     return "\n".join(lines) + "\n"
 
 
-def test_load_options():
-    assert 0 == 0
-
-
-
 def test_comments_and_blank_lines_preserved():
     lines = [
         "# This is a comment",
@@ -81,7 +76,30 @@ importance   : a | b | c
 internet     : connected | offline
 """
 
-def test_duplicate_options_rejected():
+def test_blank_options_ignored():
+    text = "importance:a| b || d"
+    opt_list = OptionsList(text)
+    assert opt_list.text == "importance : a | b | d\n"
+
+
+@pytest.mark.parametrize("text_line, key", [
+    (": d | e | f", ""),
+    ("time value : 1 | 2 | 3", "time value"),
+])
+def test_bad_keys_rejected(text_line, key):
+    with pytest.raises(OptionLineError) as exc:
+        opt_list = OptionsList(text_line)
+    assert exc.value.message.startswith('Bad key "{}"'.format(key))
+
+
+def test_missing_colon_rejected():
+    text = "foo d | e | f"
+    with pytest.raises(OptionLineError) as exc:
+        opt_list = OptionsList(text)
+    assert exc.value.message.startswith('One ":" needed in line')
+
+
+def test_duplicate_options_across_keys_rejected():
     text = """\
 availability : am | eve | pm
 importance   : b | c | a
@@ -89,7 +107,7 @@ names        : adam | eve | bill
 """
     with pytest.raises(OptionLineError) as exc:
         opt_list = OptionsList(text)
-    exc.value.message.startswith("Duplicate options")
+    assert exc.value.message.startswith("Duplicate options")
 
 
 def test_options_set_in_parse_text():
@@ -123,7 +141,6 @@ location : banbury | isleworth | kings-sutton | south-bank-centre
 def test_split_options(source, max_line_length, expected):
     opt_list = OptionsList()
     sopts = opt_list._split_options
-    print(sopts(source, max_line_length))
     assert sopts(source, max_line_length) == expected
 
 
@@ -136,15 +153,11 @@ location : banbury | isleworth | kings-sutton | south-bank-centre
     assert opt_list1.text == "location : banbury | isleworth | " + \
            "kings-sutton | south-bank-centre | whitnash\n"
     opt_list2 = OptionsList(text)  # Default max_line_length = 60
-    print("*" * 40)
-    print(opt_list2.text)
     assert opt_list2.text == """\
 location : banbury | isleworth | kings-sutton | south-bank-centre
            | whitnash
 """
     opt_list3 = OptionsList(text, 45)
-##    print("*" * 40)
-##    print(opt_list3.text)
     assert opt_list3.text == """\
 location : banbury | isleworth | kings-sutton
            | south-bank-centre | whitnash
@@ -155,4 +168,41 @@ location : banbury | isleworth
            | kings-sutton
            | south-bank-centre
            | whitnash
+"""
+
+def test_full_text_input():
+    text = """\
+# environment.txt
+# For ease of reading and editing, using options format.
+
+availability : pm |am | eve | pm
+importance   : a | c| b
+internet     : connected | offline
+location     : banbury | isleworth | kings-sutton | south-bank-centre
+               | whitnash | bognor-regis | glasgow | worthing | lands-end
+               ||| shopping-in-leamingtion || deddington
+# Status uses words rather than dates now
+status       : queued | started | nearly-done | finished | on-hold
+supermarket  : morrisons | sainsburys | tesco | asda | m&s
+urgency      : sometime | this-month | this-week | today | tomorrow
+weather      : fine | rain | showers
+"""
+    opt_list5 = OptionsList(text, 60)
+    print("*" * 40)
+    print(opt_list5.text)
+    assert opt_list5.text == """\
+# environment.txt
+# For ease of reading and editing, using options format.
+
+availability : am | eve | pm
+importance   : a | b | c
+internet     : connected | offline
+location     : banbury | bognor-regis | deddington | glasgow | isleworth
+               | kings-sutton | lands-end | shopping-in-leamingtion
+               | south-bank-centre | whitnash | worthing
+# Status uses words rather than dates now
+status       : finished | nearly-done | on-hold | queued | started
+supermarket  : asda | m&s | morrisons | sainsburys | tesco
+urgency      : sometime | this-month | this-week | today | tomorrow
+weather      : fine | rain | showers
 """
