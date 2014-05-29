@@ -54,7 +54,7 @@ def test_parse_line_with_no_colon_or_bar():
 def test_parse_text_1():
     text = "availability : am | eve | pm"
     opt_list = OptionsList(text)
-    opt_list.keys['availability'] == set(['am', 'eve', 'pm'])
+    opt_list.options['availability'] == set(['am', 'eve', 'pm'])
 
 
 def test_parse_text_2():
@@ -65,9 +65,9 @@ importance   : b | c | a
 internet     : offline | connected | offline
 """
     opt_list = OptionsList(text)
-    assert opt_list.keys['availability'] == set(['am', 'eve', 'pm'])
-    assert opt_list.keys['importance'] == set(['a', 'b', 'c'])
-    assert opt_list.keys['internet'] == set(['connected', 'offline'])
+    assert opt_list.options['availability'] == set(['am', 'eve', 'pm'])
+    assert opt_list.options['importance'] == set(['a', 'b', 'c'])
+    assert opt_list.options['internet'] == set(['connected', 'offline'])
     assert opt_list.lines[1].endswith("a | b | c")
     assert opt_list.text == """\
 availability : am | eve | pm
@@ -117,9 +117,9 @@ supermarket : morrisons | sainsburys | tesco
 """
     opt_list = OptionsList("# This will be overwritten")
     opt_list.parse_text(text)
-    assert 'started' in opt_list.keys['status']
-    assert len(opt_list.keys['status']) == 5
-    assert len(opt_list.options) == 8
+    assert 'started' in opt_list.options['status']
+    assert len(opt_list.options['status']) == 5
+    assert len(opt_list.rev_options) == 8
 
 
 def test_handles_continuation_lines():
@@ -128,8 +128,8 @@ location : banbury | isleworth | kings-sutton | south-bank-centre
            | whitnash
 """
     opt_list = OptionsList(text)
-    assert len(opt_list.keys['location']) == 5
-    assert opt_list.options['whitnash'] == 'location'
+    assert len(opt_list.options['location']) == 5
+    assert opt_list.rev_options['whitnash'] == 'location'
 
 @pytest.mark.parametrize("source, max_line_length, expected", [
     ("a | b | c", 20, ["a | b | c"]),

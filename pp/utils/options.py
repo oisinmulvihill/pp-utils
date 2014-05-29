@@ -40,8 +40,8 @@ class OptionsList(object):
     def __init__(self, source_text="", max_line_length=60):
         self.max_line_length = max_line_length
         self.lines = []
-        self.keys = {}
-        self.options = {}  # This is a reverse dictionary of self.keys
+        self.options = {}
+        self.rev_options = {}  # This is a reverse dictionary of self.options
         self.parse_text(source_text)
 
     def format_text(self, max_line_length=None):
@@ -51,7 +51,7 @@ class OptionsList(object):
         if max_line_length is None:
             max_line_length = self.max_line_length
         lines_out = []
-        max_key_length = max(len(key) for key in self.keys.keys())
+        max_key_length = max(len(key) for key in self.options.keys())
         # Allow 3 chars for " : " in between key and options
         max_option_length = max_line_length - max_key_length - 3
         for line in self.lines:
@@ -97,8 +97,8 @@ class OptionsList(object):
 
     def _clear_data(self):
         self.lines = []
-        self.keys = {}
-        self.options = {}  # This is a reverse dictionary of self.keys
+        self.options = {}
+        self.rev_options = {}  # This is a reverse dictionary of self.options
 
     def _parse_line(self, line):
         """Expecting one key word before the colon, and options after.
@@ -113,8 +113,8 @@ class OptionsList(object):
             msg = 'One ":" needed in line "{}"'
             raise OptionLineError(msg.format(line))
         #
-        options = set(z.strip() for z in opts.split('|') if len(z.strip()))
-        return key, options
+        opts_set = set(z.strip() for z in opts.split('|') if len(z.strip()))
+        return key, opts_set
 
     def _process_buffer(self, buffer_lines):
         if buffer_lines is None:
@@ -124,18 +124,18 @@ class OptionsList(object):
         if not line or line.startswith('#'):
             self.lines.append(line)
         else:
-            key, options = self._parse_line(line)
-            self.keys[key] = options
-            for opt in options:
+            key, opts_set = self._parse_line(line)
+            self.options[key] = opts_set
+            for opt in opts_set:
                 try:
-                    prev_key = self.options[opt]
+                    prev_key = self.rev_options[opt]
                     msg = 'Duplicate options for different keys ' + \
                           '("{0}:{1}" and "{2}:{1}")'
                     raise OptionLineError(msg.format(key, opt, prev_key))
                 except KeyError:
                     # This is the normal path
-                    self.options[opt] = key
-            option_str = " | ".join(sorted(options))
+                    self.rev_options[opt] = key
+            option_str = " | ".join(sorted(opts_set))
             self.lines.append("{}:{}".format(key, option_str))
 
     def _split_options(self, option_str, max_line_length):
