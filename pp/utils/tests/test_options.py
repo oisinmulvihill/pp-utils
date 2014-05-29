@@ -69,7 +69,7 @@ internet     : offline | connected | offline
     assert opt_list.options['importance'] == set(['a', 'b', 'c'])
     assert opt_list.options['internet'] == set(['connected', 'offline'])
     assert opt_list.lines[1].endswith("a | b | c")
-    assert opt_list.text == """\
+    assert str(opt_list) == """\
 availability : am | eve | pm
 importance   : a | b | c
 # Note: intentional duplication removed from output
@@ -79,7 +79,7 @@ internet     : connected | offline
 def test_blank_options_ignored():
     text = "importance:a| b || d"
     opt_list = OptionsList(text)
-    assert opt_list.text == "importance : a | b | d\n"
+    assert str(opt_list) == "importance : a | b | d\n"
 
 
 @pytest.mark.parametrize("text_line, key", [
@@ -150,20 +150,20 @@ location : banbury | isleworth | kings-sutton | south-bank-centre
            | whitnash
 """
     opt_list1 = OptionsList(text, 70)
-    assert opt_list1.text == "location : banbury | isleworth | " + \
+    assert str(opt_list1) == "location : banbury | isleworth | " + \
            "kings-sutton | south-bank-centre | whitnash\n"
     opt_list2 = OptionsList(text)  # Default max_line_length = 60
-    assert opt_list2.text == """\
+    assert str(opt_list2) == """\
 location : banbury | isleworth | kings-sutton | south-bank-centre
            | whitnash
 """
     opt_list3 = OptionsList(text, 45)
-    assert opt_list3.text == """\
+    assert str(opt_list3) == """\
 location : banbury | isleworth | kings-sutton
            | south-bank-centre | whitnash
 """
     opt_list4 = OptionsList(text, 30)
-    assert opt_list4.text == """\
+    assert str(opt_list4) == """\
 location : banbury | isleworth
            | kings-sutton
            | south-bank-centre
@@ -189,8 +189,8 @@ weather      : fine | rain | showers
 """
     opt_list5 = OptionsList(text, 60)
     print("*" * 40)
-    print(opt_list5.text)
-    assert opt_list5.text == """\
+    print(opt_list5)
+    assert str(opt_list5) == """\
 # environment.txt
 # For ease of reading and editing, using options format.
 

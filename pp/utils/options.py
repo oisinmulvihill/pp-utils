@@ -44,6 +44,9 @@ class OptionsList(object):
         self.rev_options = {}  # This is a reverse dictionary of self.options
         self.parse_text(source_text)
 
+    def __str__(self):
+        return self.format_text()
+
     def format_text(self, max_line_length=None):
         """Prepare text for output in standard format. This is a public
         function, to allow for various output max_line_lengths.
@@ -91,9 +94,9 @@ class OptionsList(object):
                 buffer_lines = [line]
         self._process_buffer(buffer_lines)
 
-    @property
-    def text(self):
-        return self.format_text()
+    # @property
+    # def text(self):
+    #     return self.format_text()
 
     def _clear_data(self):
         self.lines = []
