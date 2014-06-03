@@ -68,18 +68,17 @@ internet     : offline | connected | offline
     assert opt_list.options['availability'] == set(['am', 'eve', 'pm'])
     assert opt_list.options['importance'] == set(['a', 'b', 'c'])
     assert opt_list.options['internet'] == set(['connected', 'offline'])
-    assert opt_list.lines[1].endswith("a | b | c")
+    assert opt_list.lines[1] == "importance   : a | b | c"
     assert str(opt_list) == """\
 availability : am | eve | pm
 importance   : a | b | c
 # Note: intentional duplication removed from output
-internet     : connected | offline
-"""
+internet     : connected | offline"""
 
 def test_blank_options_ignored():
     text = "importance:a| b || d"
     opt_list = OptionsList(text)
-    assert str(opt_list) == "importance : a | b | d\n"
+    assert str(opt_list) == "importance : a | b | d"
 
 
 @pytest.mark.parametrize("text_line, key", [
@@ -97,6 +96,17 @@ def test_missing_colon_rejected():
     with pytest.raises(OptionLineError) as exc:
         opt_list = OptionsList(text)
     assert exc.value.message.startswith('One ":" needed in line')
+
+
+def test_multiple_colons_accepted():
+    text = "bar: a | bbb:27| c:95| d||"
+    opt_list = OptionsList(text)
+    assert str(opt_list) == "bar : a | bbb:27 | c:95 | d"
+
+
+def test_deals_with_empty_text_input():
+    opt_list = OptionsList("")
+    assert str(opt_list) == ""
 
 
 def test_duplicate_options_across_keys_rejected():
@@ -151,24 +161,21 @@ location : banbury | isleworth | kings-sutton | south-bank-centre
 """
     opt_list1 = OptionsList(text, 70)
     assert str(opt_list1) == "location : banbury | isleworth | " + \
-           "kings-sutton | south-bank-centre | whitnash\n"
+           "kings-sutton | south-bank-centre | whitnash"
     opt_list2 = OptionsList(text)  # Default max_line_length = 60
     assert str(opt_list2) == """\
 location : banbury | isleworth | kings-sutton | south-bank-centre
-           | whitnash
-"""
+           | whitnash"""
     opt_list3 = OptionsList(text, 45)
     assert str(opt_list3) == """\
 location : banbury | isleworth | kings-sutton
-           | south-bank-centre | whitnash
-"""
+           | south-bank-centre | whitnash"""
     opt_list4 = OptionsList(text, 30)
     assert str(opt_list4) == """\
 location : banbury | isleworth
            | kings-sutton
            | south-bank-centre
-           | whitnash
-"""
+           | whitnash"""
 
 def test_full_text_input():
     text = """\
@@ -204,5 +211,4 @@ location     : banbury | bognor-regis | deddington | glasgow | isleworth
 status       : finished | nearly-done | on-hold | queued | started
 supermarket  : asda | m&s | morrisons | sainsburys | tesco
 urgency      : sometime | this-month | this-week | today | tomorrow
-weather      : fine | rain | showers
-"""
+weather      : fine | rain | showers"""

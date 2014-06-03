@@ -39,13 +39,17 @@ class OptionsList(object):
 
     def __init__(self, source_text="", max_line_length=60):
         self.max_line_length = max_line_length
-        self.lines = []
+        self._lines = []
         self.options = {}
         self.rev_options = {}  # This is a reverse dictionary of self.options
         self.parse_text(source_text)
 
     def __str__(self):
         return self.format_text()
+
+    @property
+    def lines(self):
+        return self.format_text().splitlines()
 
     def format_text(self, max_line_length=None):
         """Prepare text for output in standard format. This is a public
@@ -54,14 +58,18 @@ class OptionsList(object):
         if max_line_length is None:
             max_line_length = self.max_line_length
         lines_out = []
-        max_key_length = max(len(key) for key in self.options.keys())
+        try:
+            max_key_length = max(len(key) for key in self.options.keys())
+        except ValueError:
+            # self.options may be an empty dictionary
+            max_key_length = 0
         # Allow 3 chars for " : " in between key and options
         max_option_length = max_line_length - max_key_length - 3
-        for line in self.lines:
+        for line in self._lines:
             if not line or line.startswith('#'):
                 lines_out.append(line)
             else:
-                key, option_str = line.split(':')
+                key, option_str = line.split(':', 1)
                 continuation_lines = []
                 if len(option_str) > max_option_length:
                     lines = self._split_options(option_str,
@@ -75,7 +83,7 @@ class OptionsList(object):
                     new_line2 = "{1:{0}}   {2}".format(max_key_length,
                                                       "", cont_line)
                     lines_out.append(new_line2)
-        return "\n".join(lines_out) + "\n"
+        return "\n".join(lines_out)
 
     def parse_text(self, source_text):
         self._clear_data()
@@ -99,7 +107,7 @@ class OptionsList(object):
     #     return self.format_text()
 
     def _clear_data(self):
-        self.lines = []
+        self._lines = []
         self.options = {}
         self.rev_options = {}  # This is a reverse dictionary of self.options
 
@@ -125,7 +133,7 @@ class OptionsList(object):
         line = ''.join(buffer_lines)
         # Pass through blank lines and comments
         if not line or line.startswith('#'):
-            self.lines.append(line)
+            self._lines.append(line)
         else:
             key, opts_set = self._parse_line(line)
             self.options[key] = opts_set
@@ -139,7 +147,7 @@ class OptionsList(object):
                     # This is the normal path
                     self.rev_options[opt] = key
             option_str = " | ".join(sorted(opts_set))
-            self.lines.append("{}:{}".format(key, option_str))
+            self._lines.append("{}:{}".format(key, option_str))
 
     def _split_options(self, option_str, max_line_length):
         """Split options into multiple strings to deal with long lists"""
