@@ -95,7 +95,7 @@ def test_missing_colon_rejected():
     text = "foo d | e | f"
     with pytest.raises(OptionLineError) as exc:
         opt_list = OptionsList(text)
-    assert exc.value.message.startswith('One ":" needed in line')
+    assert exc.value.message.startswith('":" needed in line')
 
 
 def test_multiple_colons_accepted():
@@ -212,3 +212,33 @@ status       : finished | nearly-done | on-hold | queued | started
 supermarket  : asda | m&s | morrisons | sainsburys | tesco
 urgency      : sometime | this-month | this-week | today | tomorrow
 weather      : fine | rain | showers"""
+
+
+def test_option_list_part_of():
+    outer_text = """\
+# environment, listing all possibilities.
+availability : am | eve | pm
+internet     : connected | offline
+weather      : fine | rain | showers"""
+    inner_text = """\
+internet     : connected
+weather      : rain | showers"""
+    opt_list_outer = OptionsList(outer_text)
+    opt_list_inner = OptionsList(inner_text)
+    assert opt_list_inner.part_of(opt_list_outer)
+
+
+def test_option_list_part_of_bad_option():
+    outer_text = "weather : fine | rain | showers"
+    inner_text = "weather : cloudy"
+    opt_list_outer = OptionsList(outer_text)
+    opt_list_inner = OptionsList(inner_text)
+    assert not opt_list_inner.part_of(opt_list_outer)
+
+
+def test_option_list_part_of_bad_key():
+    outer_text = "weather : fine | rain | showers"
+    inner_text2 = "foo : bar"
+    opt_list_outer = OptionsList(outer_text)
+    opt_list_inner2 = OptionsList(inner_text2)
+    assert not opt_list_inner2.part_of(opt_list_outer)

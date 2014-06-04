@@ -102,6 +102,20 @@ class OptionsList(object):
                 buffer_lines = [line]
         self._process_buffer(buffer_lines)
 
+    def part_of(self, outer_opt_list):
+        """Return True if all option keys are found in outer_opt_list,
+        and for each key, the options are in the outer_opt_list options.
+        """
+        for key, inner_options in self.options.iteritems():
+            try:
+                outer_options = outer_opt_list.options[key]
+                if not inner_options.issubset(outer_options):
+                    return False
+            except KeyError:
+                return False
+        else:
+            return True
+
     # @property
     # def text(self):
     #     return self.format_text()
@@ -121,7 +135,7 @@ class OptionsList(object):
                 msg = 'Bad key "{}" in line "{}"'
                 raise OptionLineError(msg.format(key, line))
         except ValueError:
-            msg = 'One ":" needed in line "{}"'
+            msg = '":" needed in line "{}"'
             raise OptionLineError(msg.format(line))
         #
         opts_set = set(z.strip() for z in opts.split('|') if len(z.strip()))
