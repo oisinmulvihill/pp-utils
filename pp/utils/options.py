@@ -35,6 +35,10 @@ class OptionLineError(Exception):
     pass
 
 
+class OptionSubsetError(Exception):
+    pass
+
+
 class OptionsList(object):
 
     def __init__(self, source_text="", max_line_length=60):
@@ -102,19 +106,24 @@ class OptionsList(object):
                 buffer_lines = [line]
         self._process_buffer(buffer_lines)
 
-    def part_of(self, outer_opt_list):
-        """Return True if all option keys are found in outer_opt_list,
+    def check_is_part_of(self, outer_opt_list):
+        """Check that all option keys are found in outer_opt_list,
         and for each key, the options are in the outer_opt_list options.
         """
         for key, inner_options in self.options.iteritems():
             try:
                 outer_options = outer_opt_list.options[key]
                 if not inner_options.issubset(outer_options):
-                    return False
+                    unknowns = inner_options.difference(outer_options)
+                    msg = '{} not found in permitted values for "{}"'.format(
+                        sorted(unknowns), key)
+                    print(msg)
+                    raise OptionSubsetError(msg)
             except KeyError:
-                return False
-        else:
-            return True
+                msg = '"{}" not found as option key in {}'.format(
+                      key, outer_opt_list.options.keys())
+                print(msg)
+                raise OptionSubsetError(msg)
 
     # @property
     # def text(self):

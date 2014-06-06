@@ -5,7 +5,7 @@ from pprint import pprint
 
 import pytest
 
-from pp.utils.options import OptionsList, OptionLineError
+from pp.utils.options import OptionsList, OptionLineError, OptionSubsetError
 
 
 def _get_text(lines):
@@ -214,7 +214,7 @@ urgency      : sometime | this-month | this-week | today | tomorrow
 weather      : fine | rain | showers"""
 
 
-def test_option_list_part_of():
+def test_option_list_check_is_part_of():
     outer_text = """\
 # environment, listing all possibilities.
 availability : am | eve | pm
@@ -225,20 +225,24 @@ internet     : connected
 weather      : rain | showers"""
     opt_list_outer = OptionsList(outer_text)
     opt_list_inner = OptionsList(inner_text)
-    assert opt_list_inner.part_of(opt_list_outer)
+    opt_list_inner.check_is_part_of(opt_list_outer)
 
 
-def test_option_list_part_of_bad_option():
+def test_option_list_check_is_part_of_bad_option():
     outer_text = "weather : fine | rain | showers"
     inner_text = "weather : cloudy"
     opt_list_outer = OptionsList(outer_text)
     opt_list_inner = OptionsList(inner_text)
-    assert not opt_list_inner.part_of(opt_list_outer)
+    with pytest.raises(OptionSubsetError) as exc:
+        opt_list_inner.check_is_part_of(opt_list_outer)
+    assert exc.value.message.startswith("['cloudy'] not found in permitted")
 
 
-def test_option_list_part_of_bad_key():
+def test_option_list_check_is_part_of_bad_key():
     outer_text = "weather : fine | rain | showers"
     inner_text2 = "foo : bar"
     opt_list_outer = OptionsList(outer_text)
     opt_list_inner2 = OptionsList(inner_text2)
-    assert not opt_list_inner2.part_of(opt_list_outer)
+    with pytest.raises(OptionSubsetError) as exc:
+        opt_list_inner2.check_is_part_of(opt_list_outer)
+    assert exc.value.message.startswith('"foo" not found as option key')
