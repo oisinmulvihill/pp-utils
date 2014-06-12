@@ -34,12 +34,46 @@ from pprint import pprint
 KEY_OPTIONS_SEPARATOR = '::'
 
 
-class OptionLineError(Exception):
+class OptionsLineError(Exception):
     pass
 
 
-class OptionSubsetError(Exception):
+class OptionsSubsetError(Exception):
     pass
+
+
+
+
+class OptionsLine(object):
+    """One line of an OptionsList, printed with double colon and bars
+    as separators, e.g.
+       availability :: am | eve | pm
+    Each line should be independent of the others, apart from the options
+    continuation scheme, which has worked well.
+    """
+
+    def __init__(self, source_text=""):
+        self.source_text = source_text.strip()
+        self.parse_text(source_text)
+
+    def parse_text(self, source_text):
+        """Expecting one key word before the double colon, and options after.
+        Ignore duplicate or blank options.
+        """
+        try:
+            key, opts = (x.strip()
+                         for x in source_text.split(KEY_OPTIONS_SEPARATOR, 1))
+            if len(key.split()) != 1:
+                msg = 'Bad key "{}" in line "{}"'
+                raise OptionsLineError(msg.format(key, line))
+        except ValueError:
+            msg = '"{}" needed in line "{}"'
+            raise OptionsLineError(msg.format(KEY_OPTIONS_SEPARATOR, line))
+        #
+        opts_set = set(z.strip() for z in opts.split('|') if len(z.strip()))
+        # return key, opts_set
+        self.key = key
+        self.options = opts_set
 
 
 class OptionsList(object):
@@ -68,11 +102,11 @@ class OptionsList(object):
                     unknowns = inner_options.difference(outer_options)
                     msg = '{} not found in known values for "{}":: {}'.format(
                         sorted(unknowns), key, sorted(outer_options))
-                    raise OptionSubsetError(msg)
+                    raise OptionsSubsetError(msg)
             except KeyError:
                 msg = '"{}" not found as option key in {}'.format(
                       key, outer_opt_list.options.keys())
-                raise OptionSubsetError(msg)
+                raise OptionsSubsetError(msg)
 
     def format_text(self, max_line_length=None):
         """Prepare text for output in standard format. This is a public
@@ -121,7 +155,7 @@ class OptionsList(object):
         for line in source_lines_gen:
             if line.startswith('|'):
                 if not buffer_lines:
-                    raise OptionLineError("You can't start text with '|'")
+                    raise OptionsLineError("You can't start text with '|'")
                 buffer_lines.append(line)
             else:
                 # Current is non-continuation line, so process buffer_line
@@ -138,22 +172,22 @@ class OptionsList(object):
         self.options = {}
         self.rev_options = {}  # This is a reverse dictionary of self.options
 
-    def _parse_line(self, line):
-        """Expecting one key word before the colon, and options after.
-        Ignore duplicate or blank options.
-        """
-        try:
-            key, opts = (x.strip()
-                         for x in line.split(KEY_OPTIONS_SEPARATOR, 1))
-            if len(key.split()) != 1:
-                msg = 'Bad key "{}" in line "{}"'
-                raise OptionLineError(msg.format(key, line))
-        except ValueError:
-            msg = '"{}" needed in line "{}"'
-            raise OptionLineError(msg.format(KEY_OPTIONS_SEPARATOR, line))
-        #
-        opts_set = set(z.strip() for z in opts.split('|') if len(z.strip()))
-        return key, opts_set
+    # def _parse_line(self, line):
+    #     """Expecting one key word before the colon, and options after.
+    #     Ignore duplicate or blank options.
+    #     """
+    #     try:
+    #         key, opts = (x.strip()
+    #                      for x in line.split(KEY_OPTIONS_SEPARATOR, 1))
+    #         if len(key.split()) != 1:
+    #             msg = 'Bad key "{}" in line "{}"'
+    #             raise OptionsLineError(msg.format(key, line))
+    #     except ValueError:
+    #         msg = '"{}" needed in line "{}"'
+    #         raise OptionsLineError(msg.format(KEY_OPTIONS_SEPARATOR, line))
+    #     #
+    #     opts_set = set(z.strip() for z in opts.split('|') if len(z.strip()))
+    #     return key, opts_set
 
     def _process_buffer(self, buffer_lines):
         if buffer_lines is None:
@@ -170,7 +204,7 @@ class OptionsList(object):
                     prev_key = self.rev_options[opt]
                     msg = 'Duplicate options for different keys ' + \
                           '("{0}{3}{1}" and "{2}{3}{1}")'
-                    raise OptionLineError(msg.format(
+                    raise OptionsLineError(msg.format(
                         key, opt, prev_key, KEY_OPTIONS_SEPARATOR))
                 except KeyError:
                     # This is the normal path

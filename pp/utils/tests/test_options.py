@@ -1,16 +1,28 @@
 # -*- coding: utf-8 -*-
+# test_options.py
+
 from datetime import datetime
 from dateutil.parser import parse as dt
 from pprint import pprint
 
 import pytest
 
-from pp.utils.options import OptionsList, OptionLineError, OptionSubsetError
+from pp.utils.options import (OptionsLine, OptionsList,
+                              OptionsLineError, OptionsSubsetError)
 
 
-def _get_text(lines):
-    """Join text lines and add trailing c/r"""
-    return "\n".join(lines) + "\n"
+# def _get_text(lines):
+#     """Join text lines and add trailing c/r"""
+#     return "\n".join(lines) + "\n"
+
+# Tests for option lines
+# ====================================================================
+
+def test_options_line_comment78():
+    opt_line = OptionsLine("# This is a comment")
+    assert opt_line.key is None
+    assert opt_line.options is None
+    assert opt_line.text == "# This is a comment"
 
 
 def test_comments_and_blank_lines_preserved():
@@ -21,8 +33,8 @@ def test_comments_and_blank_lines_preserved():
         "          ",  # Intentionally blank
         "# A final comment",
     ]
-    text = _get_text(lines)
-    opt_list = OptionsList(text)
+    ##text = _get_text(lines)
+    opt_list = OptionsList("\n".join(lines))
     assert opt_list.lines[0] == "# This is a comment"
     assert opt_list.lines[1].startswith("# This comment")
     assert opt_list.lines[3] == ""
