@@ -8,6 +8,8 @@ from pprint import pprint
 import pytest
 
 from pp.utils.optionlines import (CommentLine, OptionLine, OrdinaryLine,
+                                  TaskLine, BlankLine,
+                                  OptionLines,
                                   OptionLineFactory,
                                   OptionLineError)
 
@@ -30,7 +32,41 @@ def test_valid_option_line():
     option_line = OptionLine(source_line)
     assert option_line.indent == 0
     assert option_line.key == 'importance'
+    assert option_line.options == set(["a", "b", "c"])
     assert option_line.validates()
+
+
+def test_empty_options_ignored():
+    source_line = "urgency::1| 2 || 3"
+    option_line = OptionLine(source_line)
+    assert option_line.key == 'urgency'
+    assert option_line.options == set(["1", "2", "3"])
+    assert option_line.validates()
+
+
+def test_multiple_double_colons_accepted():
+    source_line = "bar:: a | bbb:27| c::95| d||"
+    option_line = OptionLine(source_line)
+    assert option_line.key == 'bar'
+    assert option_line.options == set(["a", "bbb:27", "c::95", "d"])
+
+
+@pytest.mark.parametrize("source_line, is_task_line", [
+    ("  [ ] Fix the bathroom door", True),
+    ("* [>] Apply for deed of variation", True),
+    ("+ [x] Contact agency re contract", True),
+    ("[]", True),
+    ("][", False),
+    ("[Badly formatted task]", False),
+    ("No brackets", False),
+    ("[ Only one left bracket", False),
+    ("] Only one right bracket", False),
+    ("* [  ] Two status chars possible", True),
+    ("* [   ] Too big a gap", False),
+])
+def test_task_line(source_line, is_task_line):
+    task_line = TaskLine(source_line)
+    assert task_line.validates() == is_task_line
 
 
 def test_not_an_option_line():
@@ -63,7 +99,7 @@ def test_option_line_factory_individual_lines(source_line, class_name):
     factory = OptionLineFactory()
     lines = []
     line_obj = factory.make_line(source_line)
-    assert obj.__class__.__name__ == class_name
+    assert line_obj.__class__.__name__ == class_name
 
 
 def test_option_line_factory_from_text_block():
@@ -71,13 +107,35 @@ def test_option_line_factory_from_text_block():
 # Starting with a comment
 importance :: a | b | c
 Mary had a little lamb
+[x] This task has been finished
 
-\n
+
+asdasd asdasd
 """
     factory = OptionLineFactory()
     class_names = []
-    for source_line in source_text.splitlines():
+    print(source_text.splitlines())
+    for source_line in source_text.rstrip().splitlines():
         line_obj = factory.make_line(source_line)
         class_names.append(line_obj.__class__.__name__)
     assert class_names == ['CommentLine', 'OptionLine', 'OrdinaryLine',
-                           'BlankLine', 'BlankLine', 'BlankLine']
+                           'TaskLine',
+                           'BlankLine', 'BlankLine', 'OrdinaryLine']
+
+
+def test_option_lines_from_text_block():
+    source_text = """\
+# This is a comment
+    importance :: a | b | c
+Mary had a little lamb
+
+
+defdef defdef
+"""
+    option_lines = OptionLines(source_text)
+    # print(option_lines)
+    assert str(option_lines) == source_text.rstrip()
+    assert option_lines.lines[0] == "# This is a comment"
+    assert option_lines.lines[1].startswith("    imp")
+    assert len(option_lines.lines) == 6
+    # assert 0,3

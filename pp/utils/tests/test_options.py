@@ -18,11 +18,11 @@ from pp.utils.options import (OptionsLine, OptionsList,
 # Tests for option lines
 # ====================================================================
 
-def test_options_line_comment78():
-    opt_line = OptionsLine("# This is a comment")
-    assert opt_line.key is None
-    assert opt_line.options is None
-    assert opt_line.text == "# This is a comment"
+# def test_options_line_comment78():
+#     opt_line = OptionsLine("# This is a comment")
+#     assert opt_line.key is None
+#     assert opt_line.options is None
+#     assert opt_line.text == "# This is a comment"
 
 
 def test_comments_and_blank_lines_preserved():
@@ -47,26 +47,26 @@ def test_cant_start_text_with_continuation():
     assert "You can't start" in exc.value.message
 
 
-def test_parse_line():
-    line = "availability :: am | eve | pm"
-    opt_list = OptionsList()
-    key, options = opt_list._parse_line(line)
-    assert key == 'availability'
-    assert options == set(['am', 'eve', 'pm'])
+# def test_parse_line():
+#     line = "availability :: am | eve | pm"
+#     opt_list = OptionsList()
+#     key, options = opt_list._parse_line(line)
+#     assert key == 'availability'
+#     assert options == set(['am', 'eve', 'pm'])
 
 
-def test_parse_line_with_no_colon_or_bar():
-    line = "Just a line of text"
-    opt_list = OptionsList()
-    with pytest.raises(OptionLineError) as exc:
-        opt_list._parse_line(line)
-    assert "needed in line" in exc.value.message
+# def test_parse_line_with_no_colon_or_bar():
+#     line = "Just a line of text"
+#     opt_list = OptionsList()
+#     with pytest.raises(OptionLineError) as exc:
+#         opt_list._parse_line(line)
+#     assert "needed in line" in exc.value.message
 
 
-def test_parse_text_1():
-    text = "availability :: am | eve | pm"
-    opt_list = OptionsList(text)
-    opt_list.options['availability'] == set(['am', 'eve', 'pm'])
+# def test_parse_text_1():
+#     text = "availability :: am | eve | pm"
+#     opt_list = OptionsList(text)
+#     opt_list.options['availability'] == set(['am', 'eve', 'pm'])
 
 
 def test_parse_text_2():
@@ -87,38 +87,38 @@ importance   :: a | b | c
 # Note: intentional duplication removed from output
 internet     :: connected | offline"""
 
-def test_blank_options_ignored():
-    text = "importance::a| b || d"
-    opt_list = OptionsList(text)
-    assert str(opt_list) == "importance :: a | b | d"
+# def test_blank_options_ignored():
+#     text = "importance::a| b || d"
+#     opt_list = OptionsList(text)
+#     assert str(opt_list) == "importance :: a | b | d"
 
 
-@pytest.mark.parametrize("text_line, key", [
-    (":: d | e | f", ""),
-    ("time value :: 1 | 2 | 3", "time value"),
-])
-def test_bad_keys_rejected(text_line, key):
-    with pytest.raises(OptionLineError) as exc:
-        opt_list = OptionsList(text_line)
-    assert exc.value.message.startswith('Bad key "{}"'.format(key))
+# @pytest.mark.parametrize("text_line, key", [
+#     (":: d | e | f", ""),
+#     ("time value :: 1 | 2 | 3", "time value"),
+# ])
+# def test_bad_keys_rejected(text_line, key):
+#     with pytest.raises(OptionLineError) as exc:
+#         opt_list = OptionsList(text_line)
+#     assert exc.value.message.startswith('Bad key "{}"'.format(key))
 
 
-def test_missing_colon_rejected():
-    text = "foo d | e | f"
-    with pytest.raises(OptionLineError) as exc:
-        opt_list = OptionsList(text)
-    assert exc.value.message.startswith('"::" needed in line')
+# def test_missing_colon_rejected():
+#     text = "foo d | e | f"
+#     with pytest.raises(OptionLineError) as exc:
+#         opt_list = OptionsList(text)
+#     assert exc.value.message.startswith('"::" needed in line')
 
 
-def test_multiple_colons_accepted():
-    text = "bar:: a | bbb:27| c::95| d||"
-    opt_list = OptionsList(text)
-    assert str(opt_list) == "bar :: a | bbb:27 | c::95 | d"
+# def test_multiple_colons_accepted():
+#     text = "bar:: a | bbb:27| c::95| d||"
+#     opt_list = OptionsList(text)
+#     assert str(opt_list) == "bar :: a | bbb:27 | c::95 | d"
 
 
-def test_deals_with_empty_text_input():
-    opt_list = OptionsList("")
-    assert str(opt_list) == ""
+# def test_deals_with_empty_text_input():
+#     opt_list = OptionsList("")
+#     assert str(opt_list) == ""
 
 
 def test_duplicate_options_across_keys_rejected():

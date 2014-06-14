@@ -167,10 +167,10 @@ class OptionsList(object):
     # def text(self):
     #     return self.format_text()
 
-    def _clear_data(self):
-        self._lines = []
-        self.options = {}
-        self.rev_options = {}  # This is a reverse dictionary of self.options
+    # # def _clear_data(self):
+    # #    self._lines = []
+    # #     self.options = {}
+    # #     self.rev_options = {}  # This is a reverse dictionary of self.options
 
     # def _parse_line(self, line):
     #     """Expecting one key word before the colon, and options after.
