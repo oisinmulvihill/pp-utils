@@ -54,19 +54,30 @@ def test_multiple_double_colons_accepted():
 @pytest.mark.parametrize("source_line, is_task_line", [
     ("  [ ] Fix the bathroom door", True),
     ("* [>] Apply for deed of variation", True),
-    ("+ [x] Contact agency re contract", True),
-    ("[]", True),
+    ("* [x] Contact agency re contract", True),
+    ("+ [-] No such emphasis char", False),
+    ("[]", False),  # Task text missing
     ("][", False),
     ("[Badly formatted task]", False),
     ("No brackets", False),
     ("[ Only one left bracket", False),
     ("] Only one right bracket", False),
     ("* [  ] Two status chars possible", True),
-    ("* [   ] Too big a gap", False),
 ])
 def test_task_line(source_line, is_task_line):
+    # print(source_line)
     task_line = TaskLine(source_line)
     assert task_line.validates() == is_task_line
+
+
+def test_task_line_status_text():
+    source_line = "* [x] Contact agency re contract"
+    task_line = TaskLine(source_line)
+    assert task_line.status_ch == "x"
+    assert task_line.status == "finished"
+    assert task_line.emphasis_ch == "*"
+    assert task_line.emphasis
+    assert task_line.task_text == "Contact agency re contract"
 
 
 def test_not_an_option_line():

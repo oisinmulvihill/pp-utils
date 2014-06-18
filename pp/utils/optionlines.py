@@ -43,12 +43,14 @@ note
   Special offer on Thursday
 subtask
   [ ] Research yoghurt prices
-statuses
+status
   [ ] to-do
   [/] started
   [x] finished
   [-] cancelled
-  [>] moved
+  [>] moved (or postponed)
+emphasis
+  *  True
 timeline
   date-created
   date-started
@@ -57,13 +59,23 @@ timeline
 TO-DO after all working:
 [ ] Continuation lines
 
-
 """
 
 from abc import abstractmethod
 
 
 KEY_OPTIONS_SEPARATOR = '::'
+TASK_STATUS_DICT = {
+    "": "to-do",
+    "/": "started",
+    "x": "finished",
+    "-": "cancelled",
+    ">": "moved",
+}
+TASK_EMPHASIS_DICT = {
+    "": False,
+    "*": True,
+}
 
 
 class OptionLineError(Exception):
@@ -82,17 +94,17 @@ class BaseOptionLine(object):
         self.source_line = source_line.rstrip()
         self.text = self.source_line.lstrip()
         self.indent = len(self.source_line) - len(self.text)
-        self.parse_line()
+        self._parse_line()
 
     @abstractmethod
     def validates(self):
-        pass
+        """This is called after _parse_line(), if defined."""
 
     # @abstractmethod
     # def parse_text(self, source_text):
     #     pass
 
-    def parse_line(self):
+    def _parse_line(self):
         pass
 
 
@@ -121,21 +133,36 @@ class TaskLine(BaseOptionLine):
     """
 
     def validates(self):
-        """Return True if the source_line is a task."""
+        """Return True if the source_line, after parsing, has a task."""
+        return bool(self.task_text)
+
+    def _parse_line(self):
+        parts = self.text.split("]")
         try:
-            return self.text[:5].index('[') < self.text[:6].index(']')
-        except ValueError:
-            # At least one of the brackets is missing
-            return False
+            emphasis, status = parts[0].strip().split("[")
+            print(emphasis, status)
+            self.emphasis_ch = emphasis.strip()
+            self.emphasis = TASK_EMPHASIS_DICT[self.emphasis_ch]
+            self.status_ch = status.strip()
+            self.status = TASK_STATUS_DICT[self.status_ch]
+            self.task_text = parts[1].strip()
+        except (ValueError, IndexError, KeyError):
+            # ValueError if brackets are missing
+            # IndexError if there is no parts[1], i.e. only parts[0]
+            # KeyError if lookup fails on a TASK_EMPHASIS/STATUS_DICT
+            self.status_text = None
+            self.task_text = None
 
 
 class OptionLine(BaseOptionLine):
     """A line that has a key, then the double colon, with 0 to many options
     """
 
-    # def __init__(self, source_line=""):
-    #     super(OptionLine, self).__init__(source_line)
-    def parse_line(self):
+    def validates(self):
+        """This is an OptionLine if we have successfully parsed a key"""
+        return bool(self.key)
+
+    def _parse_line(self):
         try:
             split_text = self.text.split(KEY_OPTIONS_SEPARATOR, 1)
             self.key, opts = [x.strip() for x in split_text]
@@ -151,10 +178,6 @@ class OptionLine(BaseOptionLine):
         except ValueError:
             # KEY_OPTIONS_SEPARATOR was missing, so not an OptionLine
             self.key = None
-
-    def validates(self):
-        """This is an OptionLine if we have successfully parsed a key"""
-        return bool(self.key)
 
 
 class OrdinaryLine(BaseOptionLine):
