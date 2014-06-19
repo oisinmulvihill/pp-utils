@@ -11,7 +11,7 @@ from pp.utils.optionlines import (CommentLine, OptionLine, OrdinaryLine,
                                   TaskLine, BlankLine,
                                   OptionLines,
                                   OptionLineFactory,
-                                  OptionLineError)
+                                  OptionLineError, OptionSubsetError)
 
 
 @pytest.mark.parametrize("source_line, indent, text, is_valid_comment", [
@@ -202,8 +202,8 @@ supermarket :: morrisons | sainsburys | tesco
 """
     option_lines = OptionLines("# This will be overwritten")
     option_lines.parse_text(source_text)
-    assert 'started' in option_lines.all_option_keys['status'].options
-    assert len(option_lines.all_option_keys['status'].options) == 5
+    assert 'started' in option_lines.all_keys['status'].options
+    assert len(option_lines.all_keys['status'].options) == 5
     assert len(option_lines.all_options) == 8
 
 
@@ -215,18 +215,97 @@ importance   :: b | c | a
 internet     :: offline | connected | offline
 """
     option_lines = OptionLines(source_text)
-    assert option_lines.all_option_keys['availability'
-                                        ].options == set(['am', 'eve', 'pm'])
-    assert option_lines.all_option_keys['importance'
-                                        ].options == set(['a', 'b', 'c'])
-    assert option_lines.all_option_keys['internet'
-                                        ].options == set(['connected',
-                                                          'offline'])
+    assert option_lines.all_keys['availability'
+                                 ].options == set(['am', 'eve', 'pm'])
+    assert option_lines.all_keys['importance'
+                                 ].options == set(['a', 'b', 'c'])
+    assert option_lines.all_keys['internet'
+                                 ].options == set(['connected', 'offline'])
     assert option_lines.lines[1] == "importance   :: a | b | c"
     assert str(option_lines) == """\
 availability :: am | eve | pm
 importance   :: a | b | c
 # Note: intentional duplication removed from output
 internet     :: connected | offline"""
+
+
+def test_full_text_input_3():
+    source_text = """\
+# environment.txt
+# For ease of reading and editing, using options format.
+
+availability :: pm |am | eve | pm
+importance   :: a | c| b
+internet     :: connected | offline
+location     :: banbury | isleworth | kings-sutton | south-bank-centre| whitnash | bognor-regis | glasgow | worthing | lands-end||| shopping-in-leamington || deddington
+# Status uses words rather than dates now
+status       :: queued | started | nearly-done | finished | on-hold
+supermarket  :: morrisons | sainsburys | tesco | asda | m&s
+urgency      :: sometime | this-month | this-week | today | tomorrow
+weather      :: fine | rain | showers
+"""
+    # opt_list5 = OptionsList(text, 65)
+    option_lines = OptionLines(source_text)
+    print("*" * 40)
+    print(option_lines)
+    assert str(option_lines) == """\
+# environment.txt
+# For ease of reading and editing, using options format.
+
+availability :: am | eve | pm
+importance   :: a | b | c
+internet     :: connected | offline
+location     :: banbury | bognor-regis | deddington | glasgow | isleworth | kings-sutton | lands-end | shopping-in-leamington | south-bank-centre | whitnash | worthing
+# Status uses words rather than dates now
+status       :: finished | nearly-done | on-hold | queued | started
+supermarket  :: asda | m&s | morrisons | sainsburys | tesco
+urgency      :: sometime | this-month | this-week | today | tomorrow
+weather      :: fine | rain | showers"""
+
+
+def test_option_lines_check_is_subset_of():
+    outer_text = """\
+# environment, listing all possibilities.
+availability :: am | eve | pm
+internet     :: connected | offline
+weather      :: fine | rain | showers"""
+    inner_text = """\
+internet     :: connected
+weather      :: rain | showers"""
+    opt_lines_outer = OptionLines(outer_text)
+    opt_lines_inner = OptionLines(inner_text)
+    # Raises exception if not subset
+    opt_lines_inner.check_is_subset_of(opt_lines_outer)
+
+
+def test_option_lines_check_is_subset_of_bad_option():
+    outer_text = "weather :: fine | rain | showers"
+    inner_text = "weather :: cloudy"
+    opt_lines_outer = OptionLines(outer_text)
+    opt_lines_inner = OptionLines(inner_text)
+    with pytest.raises(OptionSubsetError) as exc:
+        opt_lines_inner.check_is_subset_of(opt_lines_outer)
+    assert exc.value.message.startswith(
+        "['cloudy'] not found in \"weather\" options")
+
+
+def test_option_lines_check_is_subset_of_bad_key():
+    outer_text = "weather :: fine | rain | showers"
+    inner_text = "foo :: bar"
+    opt_lines_outer = OptionLines(outer_text)
+    opt_lines_inner = OptionLines(inner_text)
+    with pytest.raises(OptionSubsetError) as exc:
+        opt_lines_inner.check_is_subset_of(opt_lines_outer)
+    assert exc.value.message.startswith('"foo" not found as option key')
+
+
+def test_handles_continuation_lines():
+    source_text = """\
+location :: banbury | isleworth | kings-sutton | south-bank-centre
+           | whitnash
+"""
+    opt_lines = OptionLines(source_text)
+    assert len(opt_lines.all_keys['location'].options) == 5
+    assert opt_lines.all_options['whitnash'].key == 'location'
 
 

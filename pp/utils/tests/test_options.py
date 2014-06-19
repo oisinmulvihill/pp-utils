@@ -193,72 +193,72 @@ location :: banbury | isleworth
             | south-bank-centre
             | whitnash"""
 
-def test_full_text_input():
-    text = """\
-# environment.txt
-# For ease of reading and editing, using options format.
+# def test_full_text_input():
+#     text = """\
+# # environment.txt
+# # For ease of reading and editing, using options format.
 
-availability :: pm |am | eve | pm
-importance   :: a | c| b
-internet     :: connected | offline
-location     :: banbury | isleworth | kings-sutton | south-bank-centre
-                | whitnash | bognor-regis | glasgow | worthing | lands-end
-                ||| shopping-in-leamington || deddington
-# Status uses words rather than dates now
-status       :: queued | started | nearly-done | finished | on-hold
-supermarket  :: morrisons | sainsburys | tesco | asda | m&s
-urgency      :: sometime | this-month | this-week | today | tomorrow
-weather      :: fine | rain | showers
-"""
-    opt_list5 = OptionsList(text, 65)
-    print("*" * 40)
-    print(opt_list5)
-    assert str(opt_list5) == """\
-# environment.txt
-# For ease of reading and editing, using options format.
+# availability :: pm |am | eve | pm
+# importance   :: a | c| b
+# internet     :: connected | offline
+# location     :: banbury | isleworth | kings-sutton | south-bank-centre
+#                 | whitnash | bognor-regis | glasgow | worthing | lands-end
+#                 ||| shopping-in-leamington || deddington
+# # Status uses words rather than dates now
+# status       :: queued | started | nearly-done | finished | on-hold
+# supermarket  :: morrisons | sainsburys | tesco | asda | m&s
+# urgency      :: sometime | this-month | this-week | today | tomorrow
+# weather      :: fine | rain | showers
+# """
+#     opt_list5 = OptionsList(text, 65)
+#     print("*" * 40)
+#     print(opt_list5)
+#     assert str(opt_list5) == """\
+# # environment.txt
+# # For ease of reading and editing, using options format.
 
-availability :: am | eve | pm
-importance   :: a | b | c
-internet     :: connected | offline
-location     :: banbury | bognor-regis | deddington | glasgow | isleworth
-                | kings-sutton | lands-end | shopping-in-leamington
-                | south-bank-centre | whitnash | worthing
-# Status uses words rather than dates now
-status       :: finished | nearly-done | on-hold | queued | started
-supermarket  :: asda | m&s | morrisons | sainsburys | tesco
-urgency      :: sometime | this-month | this-week | today | tomorrow
-weather      :: fine | rain | showers"""
-
-
-def test_option_list_check_is_part_of():
-    outer_text = """\
-# environment, listing all possibilities.
-availability :: am | eve | pm
-internet     :: connected | offline
-weather      :: fine | rain | showers"""
-    inner_text = """\
-internet     :: connected
-weather      :: rain | showers"""
-    opt_list_outer = OptionsList(outer_text)
-    opt_list_inner = OptionsList(inner_text)
-    opt_list_inner.check_is_part_of(opt_list_outer)
+# availability :: am | eve | pm
+# importance   :: a | b | c
+# internet     :: connected | offline
+# location     :: banbury | bognor-regis | deddington | glasgow | isleworth
+#                 | kings-sutton | lands-end | shopping-in-leamington
+#                 | south-bank-centre | whitnash | worthing
+# # Status uses words rather than dates now
+# status       :: finished | nearly-done | on-hold | queued | started
+# supermarket  :: asda | m&s | morrisons | sainsburys | tesco
+# urgency      :: sometime | this-month | this-week | today | tomorrow
+# weather      :: fine | rain | showers"""
 
 
-def test_option_list_check_is_part_of_bad_option():
-    outer_text = "weather :: fine | rain | showers"
-    inner_text = "weather :: cloudy"
-    opt_list_outer = OptionsList(outer_text)
-    opt_list_inner = OptionsList(inner_text)
-    with pytest.raises(OptionSubsetError) as exc:
-        opt_list_inner.check_is_part_of(opt_list_outer)
-    assert exc.value.message.startswith("['cloudy'] not found in known")
+# def test_option_list_check_is_part_of():
+#     outer_text = """\
+# # environment, listing all possibilities.
+# availability :: am | eve | pm
+# internet     :: connected | offline
+# weather      :: fine | rain | showers"""
+#     inner_text = """\
+# internet     :: connected
+# weather      :: rain | showers"""
+#     opt_list_outer = OptionsList(outer_text)
+#     opt_list_inner = OptionsList(inner_text)
+#     opt_list_inner.check_is_part_of(opt_list_outer)
 
 
-def test_option_list_check_is_part_of_bad_key():
-    outer_text = "weather :: fine | rain | showers"
-    inner_text2 = "foo :: bar"
-    opt_list_outer = OptionsList(outer_text)
-    opt_list_inner2 = OptionsList(inner_text2)
-    with pytest.raises(OptionSubsetError) as exc:
-        opt_list_inner2.check_is_part_of(opt_list_outer)
-    assert exc.value.message.startswith('"foo" not found as option key')
+# def test_option_list_check_is_part_of_bad_option():
+#     outer_text = "weather :: fine | rain | showers"
+#     inner_text = "weather :: cloudy"
+#     opt_list_outer = OptionsList(outer_text)
+#     opt_list_inner = OptionsList(inner_text)
+#     with pytest.raises(OptionSubsetError) as exc:
+#         opt_list_inner.check_is_part_of(opt_list_outer)
+#     assert exc.value.message.startswith("['cloudy'] not found in known")
+
+
+# def test_option_list_check_is_part_of_bad_key():
+#     outer_text = "weather :: fine | rain | showers"
+#     inner_text2 = "foo :: bar"
+#     opt_list_outer = OptionsList(outer_text)
+#     opt_list_inner2 = OptionsList(inner_text2)
+#     with pytest.raises(OptionSubsetError) as exc:
+#         opt_list_inner2.check_is_part_of(opt_list_outer)
+#     assert exc.value.message.startswith('"foo" not found as option key')

@@ -62,6 +62,7 @@ TO-DO after all working:
 [ ] Options subset
 [ ] Continuation lines
 [ ] Alignment of double colons
+[ ] Subset return T/F or Exception?
 """
 
 from abc import abstractmethod
@@ -83,6 +84,10 @@ TASK_EMPHASIS_DICT = {
 
 
 class OptionLineError(Exception):
+    pass
+
+
+class OptionSubsetError(Exception):
     pass
 
 
@@ -243,7 +248,7 @@ class OptionLines(object):
 
     def __init__(self, source_text=""):
         self._obj_lines = []  # Or use a MutableMapping instead
-        self.all_option_keys = {}
+        self.all_keys = {}
         self.all_options = {}
         self.line_factory = OptionLineFactory()
 
@@ -257,6 +262,25 @@ class OptionLines(object):
 
     def __str__(self):
         return self.format_text()
+
+    def check_is_subset_of(self, outer_opt_lines):
+        """Return True if all option keys are found in outer_opt_lines,
+        and for each key, the options are in the outer_opt_lines options.
+        """
+        # for key, inner_options in self.options.iteritems():
+        for key in self.all_keys:
+            inner_options = self.all_keys[key].options
+            try:
+                outer_options = outer_opt_lines.all_keys[key].options
+                if not inner_options.issubset(outer_options):
+                    unknowns = inner_options.difference(outer_options)
+                    msg = '{} not found in "{}" options: {}'.format(
+                        sorted(unknowns), key, sorted(outer_options))
+                    raise OptionSubsetError(msg)
+            except KeyError:
+                msg = '"{}" not found as option key in {}'.format(
+                      key, outer_opt_lines.all_keys.keys())
+                raise OptionSubsetError(msg)
 
     def format_text(self):
         """Return lines in canonical output form"""
@@ -274,36 +298,114 @@ class OptionLines(object):
     def parse_text(self, source_text):
         self._clear_data()
         self.source_text = source_text.rstrip()
-
+        # source_lines_gen = (line.strip()
+        #                     for line in self.source_text.splitlines())
+        buffer_lines = None
         for source_line in self.source_text.splitlines():
-            line_obj = self.line_factory.make_line(source_line.rstrip())
-            # import pdb;pdb.set_trace()
-            self._obj_lines.append(line_obj)
-            if isinstance(line_obj, OptionLine):
-                if line_obj.key in self.all_option_keys:
-                    msg = 'Duplicate option keys found: "{}"'
-                    raise OptionLineError(msg.format(line_obj.key))
-                else:
-                    self.all_option_keys[line_obj.key] = line_obj
-                for opt in line_obj.options:
-                    try:
-                        prev_key = self.all_options[opt]
-                        msg = 'Duplicate options for different keys ' + \
-                              '("{0}{3}{1}" and "{2}{3}{1}")'
-                        raise OptionLineError(msg.format(
-                            line_obj.key, opt, prev_key,
-                            KEY_OPTIONS_SEPARATOR))
-                    except KeyError:
-                        # This is the normal path
-                        self.all_options[opt] = line_obj
+            if source_line.lstrip().startswith('|'):
+                if not buffer_lines:
+                    msg = "You can't start text with '|': {}"
+                    raise OptionLineError(msg.format(source_line))
+                buffer_lines.append(source_line.rstrip())
+            else:
+                # Current is non-continuation line, so process buffer_lines
+                self._process_buffer(buffer_lines)
+                buffer_lines = [source_line.rstrip()]
+        self._process_buffer(buffer_lines)
+        self._give_all_line_objects_the_maximum_key_length()
+
+    def _process_buffer(self, buffer_lines):
+        if buffer_lines is None:
+            return  # First time called
+        complete_line = ''.join(buffer_lines)
+        line_obj = self.line_factory.make_line(complete_line)
+        self._obj_lines.append(line_obj)
+        if isinstance(line_obj, OptionLine):
+            self._check_for_option_duplication(line_obj)
+
+        # # Pass through blank lines and comments
+        # if not line or line.startswith('#'):
+        #     self._lines.append(line)
+        # else:
+        #     key, opts_set = self._parse_line(line)
+        #     self.options[key] = opts_set
+        #     for opt in opts_set:
+        #         try:
+        #             prev_key = self.rev_options[opt]
+        #             msg = 'Duplicate options for different keys ' + \
+        #                   '("{0}{3}{1}" and "{2}{3}{1}")'
+        #             raise OptionsLineError(msg.format(
+        #                 key, opt, prev_key, KEY_OPTIONS_SEPARATOR))
+        #         except KeyError:
+        #             # This is the normal path
+        #             self.rev_options[opt] = key
+        #     option_str = " | ".join(sorted(opts_set))
+        #     self._lines.append("{}{}{}".format(key, KEY_OPTIONS_SEPARATOR,
+        #                                        option_str))
+
+    def _check_for_option_duplication(self, line_obj):
+        if line_obj.key in self.all_keys:
+            msg = 'Duplicate option keys found: "{}"'
+            raise OptionLineError(msg.format(line_obj.key))
+        else:
+            self.all_keys[line_obj.key] = line_obj
+            for opt in line_obj.options:
+                try:
+                    prev_key = self.all_options[opt]
+                    msg = 'Duplicate options for different keys ' + \
+                          '("{0}{3}{1}" and "{2}{3}{1}")'
+                    raise OptionLineError(msg.format(
+                        line_obj.key, opt, prev_key,
+                        KEY_OPTIONS_SEPARATOR))
+                except KeyError:
+                    # This is the normal path
+                    self.all_options[opt] = line_obj
+
+    def _give_all_line_objects_the_maximum_key_length(self):
+        """Each line objects needs to know the maximum key length from all
+        the option lines, to be able to calculate the "::" indent."""
         try:
             self.max_key_length = max(len(key)
-                                      for key in self.all_option_keys.keys())
-            for line_obj in self.all_option_keys.values():
+                                      for key in self.all_keys.keys())
+            for line_obj in self.all_keys.values():
                 line_obj.max_key_length = self.max_key_length
         except ValueError:
-            # self.options may be an empty dictionary
+            # self.all_keys may be an empty dictionary
             self.max_key_length = 0
+
+    # def _________parse_text(self, source_text):
+        # self._clear_data()
+        # self.source_text = source_text.rstrip()
+
+        # for source_line in self.source_text.splitlines():
+            # line_obj = self.line_factory.make_line(source_line.rstrip())
+            # import pdb;pdb.set_trace()
+            # self._obj_lines.append(line_obj)
+            # if isinstance(line_obj, OptionLine):
+            #     if line_obj.key in self.all_keys:
+            #         msg = 'Duplicate option keys found: "{}"'
+            #         raise OptionLineError(msg.format(line_obj.key))
+            #     else:
+            #         self.all_keys[line_obj.key] = line_obj
+            #     for opt in line_obj.options:
+            #         try:
+            #             prev_key = self.all_options[opt]
+            #             msg = 'Duplicate options for different keys ' + \
+            #                   '("{0}{3}{1}" and "{2}{3}{1}")'
+            #             raise OptionLineError(msg.format(
+            #                 line_obj.key, opt, prev_key,
+            #                 KEY_OPTIONS_SEPARATOR))
+            #         except KeyError:
+            #             # This is the normal path
+            #             self.all_options[opt] = line_obj
+        # try:
+        #     self.max_key_length = max(len(key)
+        #                               for key in self.all_keys.keys())
+        #     for line_obj in self.all_keys.values():
+        #         line_obj.max_key_length = self.max_key_length
+        # except ValueError:
+        #     # self.options may be an empty dictionary
+        #     self.max_key_length = 0
 
 
         # buffer_lines = None
@@ -321,7 +423,7 @@ class OptionLines(object):
 
     def _clear_data(self):
         self._obj_lines = []
-        self.all_option_keys = {}
+        self.all_keys = {}
         self.all_options = {}
 
 

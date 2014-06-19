@@ -91,22 +91,22 @@ class OptionsList(object):
     def __str__(self):
         return self.format_text()
 
-    def check_is_part_of(self, outer_opt_list):
-        """Check that all option keys are found in outer_opt_list,
-        and for each key, the options are in the outer_opt_list options.
-        """
-        for key, inner_options in self.options.iteritems():
-            try:
-                outer_options = outer_opt_list.options[key]
-                if not inner_options.issubset(outer_options):
-                    unknowns = inner_options.difference(outer_options)
-                    msg = '{} not found in known values for "{}":: {}'.format(
-                        sorted(unknowns), key, sorted(outer_options))
-                    raise OptionsSubsetError(msg)
-            except KeyError:
-                msg = '"{}" not found as option key in {}'.format(
-                      key, outer_opt_list.options.keys())
-                raise OptionsSubsetError(msg)
+    # def check_is_part_of(self, outer_opt_list):
+    #     """Check that all option keys are found in outer_opt_list,
+    #     and for each key, the options are in the outer_opt_list options.
+    #     """
+    #     for key, inner_options in self.options.iteritems():
+    #         try:
+    #             outer_options = outer_opt_list.options[key]
+    #             if not inner_options.issubset(outer_options):
+    #                 unknowns = inner_options.difference(outer_options)
+    #                 msg = '{} not found in known values for "{}":: {}'.format(
+    #                     sorted(unknowns), key, sorted(outer_options))
+    #                 raise OptionsSubsetError(msg)
+    #         except KeyError:
+    #             msg = '"{}" not found as option key in {}'.format(
+    #                   key, outer_opt_list.options.keys())
+    #             raise OptionsSubsetError(msg)
 
     def format_text(self, max_line_length=None):
         """Prepare text for output in standard format. This is a public
@@ -142,26 +142,26 @@ class OptionsList(object):
                     lines_out.append(new_line2)
         return "\n".join(lines_out)
 
-    @property
-    def lines(self):
-        return self.format_text().splitlines()
+    # @property
+    # def lines(self):
+    #     return self.format_text().splitlines()
 
-    def parse_text(self, source_text):
-        self._clear_data()
-        self.source_text = source_text.strip()
-        source_lines_gen = (line.strip()
-                            for line in self.source_text.splitlines())
-        buffer_lines = None
-        for line in source_lines_gen:
-            if line.startswith('|'):
-                if not buffer_lines:
-                    raise OptionsLineError("You can't start text with '|'")
-                buffer_lines.append(line)
-            else:
-                # Current is non-continuation line, so process buffer_line
-                self._process_buffer(buffer_lines)
-                buffer_lines = [line]
-        self._process_buffer(buffer_lines)
+    # def parse_text(self, source_text):
+    #     self._clear_data()
+    #     self.source_text = source_text.strip()
+    #     source_lines_gen = (line.strip()
+    #                         for line in self.source_text.splitlines())
+    #     buffer_lines = None
+    #     for line in source_lines_gen:
+    #         if line.startswith('|'):
+    #             if not buffer_lines:
+    #                 raise OptionsLineError("You can't start text with '|'")
+    #             buffer_lines.append(line)
+    #         else:
+    #             # Current is non-continuation line, so process buffer_line
+    #             self._process_buffer(buffer_lines)
+    #             buffer_lines = [line]
+    #     self._process_buffer(buffer_lines)
 
     # @property
     # def text(self):
