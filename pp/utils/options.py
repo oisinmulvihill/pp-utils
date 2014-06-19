@@ -44,36 +44,36 @@ class OptionsSubsetError(Exception):
 
 
 
-class OptionsLine(object):
-    """One line of an OptionsList, printed with double colon and bars
-    as separators, e.g.
-       availability :: am | eve | pm
-    Each line should be independent of the others, apart from the options
-    continuation scheme, which has worked well.
-    """
+# class OptionsLine(object):
+#     """One line of an OptionsList, printed with double colon and bars
+#     as separators, e.g.
+#        availability :: am | eve | pm
+#     Each line should be independent of the others, apart from the options
+#     continuation scheme, which has worked well.
+#     """
 
-    def __init__(self, source_text=""):
-        self.source_text = source_text.strip()
-        self.parse_text(source_text)
+#     def __init__(self, source_text=""):
+#         self.source_text = source_text.strip()
+#         self.parse_text(source_text)
 
-    def parse_text(self, source_text):
-        """Expecting one key word before the double colon, and options after.
-        Ignore duplicate or blank options.
-        """
-        try:
-            key, opts = (x.strip()
-                         for x in source_text.split(KEY_OPTIONS_SEPARATOR, 1))
-            if len(key.split()) != 1:
-                msg = 'Bad key "{}" in line "{}"'
-                raise OptionsLineError(msg.format(key, line))
-        except ValueError:
-            msg = '"{}" needed in line "{}"'
-            raise OptionsLineError(msg.format(KEY_OPTIONS_SEPARATOR, line))
-        #
-        opts_set = set(z.strip() for z in opts.split('|') if len(z.strip()))
-        # return key, opts_set
-        self.key = key
-        self.options = opts_set
+#     def parse_text(self, source_text):
+#         """Expecting one key word before the double colon, and options after.
+#         Ignore duplicate or blank options.
+#         """
+#         try:
+#             key, opts = (x.strip()
+#                          for x in source_text.split(KEY_OPTIONS_SEPARATOR, 1))
+#             if len(key.split()) != 1:
+#                 msg = 'Bad key "{}" in line "{}"'
+#                 raise OptionsLineError(msg.format(key, line))
+#         except ValueError:
+#             msg = '"{}" needed in line "{}"'
+#             raise OptionsLineError(msg.format(KEY_OPTIONS_SEPARATOR, line))
+#         #
+#         opts_set = set(z.strip() for z in opts.split('|') if len(z.strip()))
+#         # return key, opts_set
+#         self.key = key
+#         self.options = opts_set
 
 
 class OptionsList(object):

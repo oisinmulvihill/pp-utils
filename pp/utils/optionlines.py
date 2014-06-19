@@ -57,8 +57,11 @@ timeline
   date-finished
 
 TO-DO after all working:
+[ ] Duplicate keys across lines rejected
+[ ] duplicate_options_across_keys_rejected
+[ ] Options subset
 [ ] Continuation lines
-
+[ ] Alignment of double colons
 """
 
 from abc import abstractmethod
@@ -70,11 +73,12 @@ TASK_STATUS_DICT = {
     "/": "started",
     "x": "finished",
     "-": "cancelled",
-    ">": "moved",
+    ">": "later",
 }
 TASK_EMPHASIS_DICT = {
-    "": False,
-    "*": True,
+    "": "not-urgent",
+    "*": "urgent",
+    "**": "today",
 }
 
 
@@ -92,9 +96,14 @@ class BaseOptionLine(object):
 
     def __init__(self, source_line=""):
         self.source_line = source_line.rstrip()
-        self.text = self.source_line.lstrip()
-        self.indent = len(self.source_line) - len(self.text)
+        self._text = self.source_line.lstrip()
+        self.indent = len(self.source_line) - len(self._text)
         self._parse_line()
+
+    @property
+    def text(self):
+        """Return the text value that follows any indent"""
+        return self._format_line()
 
     @abstractmethod
     def validates(self):
@@ -104,6 +113,9 @@ class BaseOptionLine(object):
     # def parse_text(self, source_text):
     #     pass
 
+    def _format_line(self):
+        return self._text
+
     def _parse_line(self):
         pass
 
@@ -111,7 +123,7 @@ class BaseOptionLine(object):
 class BlankLine(BaseOptionLine):
 
     def validates(self):
-        return not len(self.text) and not self.indent
+        return not len(self._text) and not self.indent
 
 
 class CommentLine(BaseOptionLine):
@@ -120,7 +132,51 @@ class CommentLine(BaseOptionLine):
 
     def validates(self):
         """True if the source_line is a comment"""
-        return self.text.startswith("#")
+        return self._text.startswith("#")
+
+
+class OptionLine(BaseOptionLine):
+    """A line that has a key, then the double colon, with 0 to many options
+    """
+
+    def __init__(self, source_line=""):
+        super(OptionLine, self).__init__(source_line)
+        self.max_key_length = 0  # Increases width of first column if > 0
+
+    def validates(self):
+        """This is an OptionLine if we have successfully parsed a key"""
+        return bool(self.key)
+
+    def _format_line(self):
+        """Return canonical text form of option line"""
+        options_str = " | ".join(sorted(self.options))
+        # NB String format can have arg {0} here as "" but not 0
+        return "{1:{0}} {2} {3}".format(self.max_key_length or "", self.key,
+                                        KEY_OPTIONS_SEPARATOR, options_str)
+
+    def _parse_line(self):
+        try:
+            split_text = self._text.split(KEY_OPTIONS_SEPARATOR, 1)
+            self.key, opts = [x.strip() for x in split_text]
+            # This is an OptionLine: check that key is a single word
+            if len(self.key.split()) != 1:
+                msg = 'Bad key "{}" in line "{}"'
+                raise OptionLineError(msg.format(self.key, self._text))
+            # self.options = set(z.strip() for z in opts.split('|')
+            #                    if len(z.strip()))
+            self.options = set(x for x in (z.strip()
+                                           for z in opts.split('|'))
+                               if len(x))
+        except ValueError:
+            # KEY_OPTIONS_SEPARATOR was missing, so not an OptionLine
+            self.key = None
+            self.options = None
+
+
+class OrdinaryLine(BaseOptionLine):
+
+    def validates(self):
+        return len(self._text) > 0
 
 
 class TaskLine(BaseOptionLine):
@@ -136,8 +192,14 @@ class TaskLine(BaseOptionLine):
         """Return True if the source_line, after parsing, has a task."""
         return bool(self.task_text)
 
+    def _format_line(self):
+        """Return text part of task line, after the indent"""
+        emphasis_and_status = "{:2}[{:1}]".format(self.emphasis_ch,
+                                                  self.status_ch).strip()
+        return " ".join([emphasis_and_status, self.task_text])
+
     def _parse_line(self):
-        parts = self.text.split("]")
+        parts = self._text.split("]")
         try:
             emphasis, status = parts[0].strip().split("[")
             print(emphasis, status)
@@ -152,38 +214,6 @@ class TaskLine(BaseOptionLine):
             # KeyError if lookup fails on a TASK_EMPHASIS/STATUS_DICT
             self.status_text = None
             self.task_text = None
-
-
-class OptionLine(BaseOptionLine):
-    """A line that has a key, then the double colon, with 0 to many options
-    """
-
-    def validates(self):
-        """This is an OptionLine if we have successfully parsed a key"""
-        return bool(self.key)
-
-    def _parse_line(self):
-        try:
-            split_text = self.text.split(KEY_OPTIONS_SEPARATOR, 1)
-            self.key, opts = [x.strip() for x in split_text]
-            # This is an OptionLine: check that key is a single word
-            if len(self.key.split()) != 1:
-                msg = 'Bad key "{}" in line "{}"'
-                raise OptionLineError(msg.format(self.key, self.text))
-            # self.options = set(z.strip() for z in opts.split('|')
-            #                    if len(z.strip()))
-            self.options = set(x for x in (z.strip()
-                                           for z in opts.split('|'))
-                               if len(x))
-        except ValueError:
-            # KEY_OPTIONS_SEPARATOR was missing, so not an OptionLine
-            self.key = None
-
-
-class OrdinaryLine(BaseOptionLine):
-
-    def validates(self):
-        return len(self.text) > 0
 
 
 class OptionLineFactory(object):
@@ -213,13 +243,13 @@ class OptionLines(object):
 
     def __init__(self, source_text=""):
         self._obj_lines = []  # Or use a MutableMapping instead
-        self.all_keys = {}
+        self.all_option_keys = {}
         self.all_options = {}
         self.line_factory = OptionLineFactory()
 
 
-        # self.text = self.source_line.lstrip()
-        # self.indent = len(self.source_line) - len(self.text)
+        # self._text = self.source_line.lstrip()
+        # self.indent = len(self.source_line) - len(self._text)
         self.parse_text(source_text)
 
     def __repr__(self):
@@ -249,6 +279,32 @@ class OptionLines(object):
             line_obj = self.line_factory.make_line(source_line.rstrip())
             # import pdb;pdb.set_trace()
             self._obj_lines.append(line_obj)
+            if isinstance(line_obj, OptionLine):
+                if line_obj.key in self.all_option_keys:
+                    msg = 'Duplicate option keys found: "{}"'
+                    raise OptionLineError(msg.format(line_obj.key))
+                else:
+                    self.all_option_keys[line_obj.key] = line_obj
+                for opt in line_obj.options:
+                    try:
+                        prev_key = self.all_options[opt]
+                        msg = 'Duplicate options for different keys ' + \
+                              '("{0}{3}{1}" and "{2}{3}{1}")'
+                        raise OptionLineError(msg.format(
+                            line_obj.key, opt, prev_key,
+                            KEY_OPTIONS_SEPARATOR))
+                    except KeyError:
+                        # This is the normal path
+                        self.all_options[opt] = line_obj
+        try:
+            self.max_key_length = max(len(key)
+                                      for key in self.all_option_keys.keys())
+            for line_obj in self.all_option_keys.values():
+                line_obj.max_key_length = self.max_key_length
+        except ValueError:
+            # self.options may be an empty dictionary
+            self.max_key_length = 0
+
 
         # buffer_lines = None
         # for line in source_lines_gen:
@@ -265,7 +321,7 @@ class OptionLines(object):
 
     def _clear_data(self):
         self._obj_lines = []
-        self.all_keys = {}
+        self.all_option_keys = {}
         self.all_options = {}
 
 
