@@ -143,7 +143,6 @@ class CommentLine(BaseOptionLine):
         """True if the source_line is a comment"""
         return self._text.startswith("#")
 
-xcounter = 0
 
 class OptionLine(BaseOptionLine):
     """A line that has a key, then the double colon, with 0 to many options
@@ -161,7 +160,6 @@ class OptionLine(BaseOptionLine):
         """Return canonical text form of option line. This may be split
         into multiple lines, if line would exceed max_line_length.
         """
-        global xcounter
         options_str = " | ".join(sorted(self.options))
         # NB String format can have arg {0} here as "" but not 0
         try:
@@ -171,36 +169,17 @@ class OptionLine(BaseOptionLine):
         if self.lines_container:
             max_option_len = self.lines_container.max_option_length
         else:
-            max_option_len = None
+            max_option_len = sys.maxsize  # Python 3==> not sys.maxint
         continuation_lines = []
-
-        # import pdb;pdb.set_trace()
-
         split_option_lines = self._wrap_options(max_option_len)
-        xcounter += 1
-        # print("XXX {} XXX {} mol={}".format(xcounter, split_option_lines,
-        #                              max_option_len))
-
         first_prefix = "{1:{0}} {2} ".format(max_key_len, self.key,
                                              KEY_OPTIONS_SEPARATOR)
         continuation_prefix = "{1:{0}} {2} ".format(
             max_key_len, "", " " * len(KEY_OPTIONS_SEPARATOR))
-        # print(first_prefix + "! first_prefix")
-        # print(continuation_prefix + "! continuation_prefix")
-        # print(sorted(self.options))
-        # pprint(split_option_lines)
-        # print("max_key_len = '{}'".format(max_key_len))
-        print("max_option_len = '{}'".format(max_option_len))
-        print("-" * 50)
         result_lines = [first_prefix + split_option_lines[0]]
         for cont_line in split_option_lines[1:]:
             result_lines.append(continuation_prefix + cont_line)
-        pprint(result_lines)
-        # assert 0, 79
         return "\n".join(result_lines)
-
-        # return "{1:{0}} {2} {3}".format(max_key_len, self.key,
-        #                                 KEY_OPTIONS_SEPARATOR, options_str)
 
     def _parse_line(self):
         try:
@@ -222,15 +201,13 @@ class OptionLine(BaseOptionLine):
 
     def _wrap_options(self, max_option_length):
         """Split options into multiple strings to deal with long lists"""
-        if not max_option_length:
-            max_option_length = sys.maxsize  # Python 3==> not sys.maxint
-        # option_gen = (opt.strip() for opt in option_str.split('|'))
+        ## if not max_option_length:
+        ##     max_option_length = sys.maxsize  # Python 3==> not sys.maxint
+        result_lines = []
         current_line = []
         # current_length starts at -3 to allow for no leading separator
         current_length = -3
-        result_lines = []
 
-        # for opt in option_gen:
         for opt in sorted(self.options):
             if current_length + 3 + len(opt) <= max_option_length:
                 current_line.append(opt)
@@ -274,7 +251,6 @@ class TaskLine(BaseOptionLine):
         parts = self._text.split("]")
         try:
             emphasis, status = parts[0].strip().split("[")
-            # print(emphasis, status)
             self.emphasis_ch = emphasis.strip()
             self.emphasis = TASK_EMPHASIS_DICT[self.emphasis_ch]
             self.status_ch = status.strip()
@@ -394,34 +370,17 @@ class OptionLines(object):
         self._process_buffer(buffer_lines)
         self._calc_maximum_key_length()
 
-    def _process_buffer(self, buffer_lines):
-        if buffer_lines is None:
-            return  # First time called
-        complete_line = ''.join(buffer_lines)
-        line_obj = self.line_factory.make_line(complete_line)
-        self._obj_lines.append(line_obj)
-        if isinstance(line_obj, OptionLine):
-            self._check_for_option_duplication(line_obj)
-
-        # # Pass through blank lines and comments
-        # if not line or line.startswith('#'):
-        #     self._lines.append(line)
-        # else:
-        #     key, opts_set = self._parse_line(line)
-        #     self.options[key] = opts_set
-        #     for opt in opts_set:
-        #         try:
-        #             prev_key = self.rev_options[opt]
-        #             msg = 'Duplicate options for different keys ' + \
-        #                   '("{0}{3}{1}" and "{2}{3}{1}")'
-        #             raise OptionsLineError(msg.format(
-        #                 key, opt, prev_key, KEY_OPTIONS_SEPARATOR))
-        #         except KeyError:
-        #             # This is the normal path
-        #             self.rev_options[opt] = key
-        #     option_str = " | ".join(sorted(opts_set))
-        #     self._lines.append("{}{}{}".format(key, KEY_OPTIONS_SEPARATOR,
-        #                                        option_str))
+    def _calc_maximum_key_length(self):
+        """Each line objects needs to know the maximum key length from all
+        the option lines, to be able to calculate the "::" indent."""
+        try:
+            self.max_key_length = max(len(key)
+                                      for key in self.all_keys.keys())
+            # for line_obj in self.all_keys.values():
+            #     line_obj.max_key_length = self.max_key_length
+        except ValueError:
+            # self.all_keys may be an empty dictionary
+            self.max_key_length = 0
 
     def _check_for_option_duplication(self, line_obj):
         if line_obj.key in self.all_keys:
@@ -441,72 +400,17 @@ class OptionLines(object):
                     # This is the normal path
                     self.all_options[opt] = line_obj
 
-    def _calc_maximum_key_length(self):
-        """Each line objects needs to know the maximum key length from all
-        the option lines, to be able to calculate the "::" indent."""
-        try:
-            self.max_key_length = max(len(key)
-                                      for key in self.all_keys.keys())
-            # for line_obj in self.all_keys.values():
-            #     line_obj.max_key_length = self.max_key_length
-        except ValueError:
-            # self.all_keys may be an empty dictionary
-            self.max_key_length = 0
-
-    # def _________parse_text(self, source_text):
-        # self._clear_data()
-        # self.source_text = source_text.rstrip()
-
-        # for source_line in self.source_text.splitlines():
-            # line_obj = self.line_factory.make_line(source_line.rstrip())
-            # import pdb;pdb.set_trace()
-            # self._obj_lines.append(line_obj)
-            # if isinstance(line_obj, OptionLine):
-            #     if line_obj.key in self.all_keys:
-            #         msg = 'Duplicate option keys found: "{}"'
-            #         raise OptionLineError(msg.format(line_obj.key))
-            #     else:
-            #         self.all_keys[line_obj.key] = line_obj
-            #     for opt in line_obj.options:
-            #         try:
-            #             prev_key = self.all_options[opt]
-            #             msg = 'Duplicate options for different keys ' + \
-            #                   '("{0}{3}{1}" and "{2}{3}{1}")'
-            #             raise OptionLineError(msg.format(
-            #                 line_obj.key, opt, prev_key,
-            #                 KEY_OPTIONS_SEPARATOR))
-            #         except KeyError:
-            #             # This is the normal path
-            #             self.all_options[opt] = line_obj
-        # try:
-        #     self.max_key_length = max(len(key)
-        #                               for key in self.all_keys.keys())
-        #     for line_obj in self.all_keys.values():
-        #         line_obj.max_key_length = self.max_key_length
-        # except ValueError:
-        #     # self.options may be an empty dictionary
-        #     self.max_key_length = 0
-
-
-        # buffer_lines = None
-        # for line in source_lines_gen:
-        #     if line.startswith('|'):
-        #         if not buffer_lines:
-        #             raise OptionsLineError("You can't start text with '|'")
-        #         buffer_lines.append(line)
-        #     else:
-        #         # Current is non-continuation line, so process buffer_line
-        #         self._process_buffer(buffer_lines)
-        #         buffer_lines = [line]
-        # self._process_buffer(buffer_lines)
-
-
     def _clear_data(self):
         self._obj_lines = []
         self.all_keys = {}
         self.all_options = {}
 
+    def _process_buffer(self, buffer_lines):
+        if buffer_lines is None:
+            return  # First time called
+        complete_line = ''.join(buffer_lines)
+        line_obj = self.line_factory.make_line(complete_line)
+        self._obj_lines.append(line_obj)
+        if isinstance(line_obj, OptionLine):
+            self._check_for_option_duplication(line_obj)
 
-# for source_line in source_text.rstrip().splitlines():
-#         line_obj = factory.make_line(source_line)
-#         class_names.append(line_obj.__class__.__name__)

@@ -246,11 +246,8 @@ supermarket  :: morrisons | sainsburys | tesco | asda | m&s
 urgency      :: sometime | this-month | this-week | today | tomorrow
 weather      :: fine | rain | showers
 """
-    # opt_list5 = OptionsList(text, 65)
     option_lines = OptionLines(source_text)
     assert len(option_lines) == 12
-    # print("*" * 40)
-    # print(option_lines)
     assert str(option_lines) == """\
 # environment.txt
 # For ease of reading and editing, using options format.
@@ -318,8 +315,6 @@ def test_wrap_options(source_line, max_option_length, expected):
     opt_line = OptionLine()
     opts_gen = (opt.strip() for opt in source_line.split('|'))
     opt_line.options = set(opt for opt in opts_gen if len(opt))
-    # print(source_line, max_option_length)
-    # print(opt_line.options)
     assert opt_line._wrap_options(max_option_length) == expected
 
 
@@ -337,7 +332,7 @@ location :: banbury | isleworth | kings-sutton | south-bank-centre
             | whitnash"""
 
 
-def test_continuation_lines_2a333():
+def test_continuation_lines_2():
     source_text = """\
 location1234 :: banbury | isleworth | kings-sutton | south-bank-centre
                 | whitnash | bognor-regis | glasgow | worthing
@@ -353,8 +348,37 @@ location1234 :: banbury | bognor-regis | deddington | glasgow
 
 
 def test_cant_start_text_with_continuation():
-    return #xxxxxxxxxxxxxxx
     source_text = "| more-options"
     with pytest.raises(OptionLineError) as exc:
         opt_lines = OptionLines(source_text)
     assert "You can't start" in exc.value.message
+
+
+def test_init_with_long_lines():
+    source_text = """\
+location :: banbury | isleworth | south-bank-centre
+    | kings-sutton
+            | whitnash
+"""
+    opt_lines1 = OptionLines(source_text, 77)
+    assert str(opt_lines1) == ("location :: banbury | isleworth | " +
+                               "kings-sutton | south-bank-centre | whitnash")
+    opt_lines2 = OptionLines(source_text)  # Default max_line_length = 70
+    assert str(opt_lines2) == """\
+location :: banbury | isleworth | kings-sutton | south-bank-centre
+            | whitnash"""
+    opt_lines3 = OptionLines(source_text, 46)
+    assert str(opt_lines3) == """\
+location :: banbury | isleworth | kings-sutton
+            | south-bank-centre | whitnash"""
+    opt_lines4 = OptionLines(source_text, 45)
+    assert str(opt_lines4) == """\
+location :: banbury | isleworth
+            | kings-sutton
+            | south-bank-centre | whitnash"""
+    opt_lines5 = OptionLines(source_text, 31)
+    assert str(opt_lines5) == """\
+location :: banbury | isleworth
+            | kings-sutton
+            | south-bank-centre
+            | whitnash"""

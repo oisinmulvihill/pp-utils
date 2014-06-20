@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # test_options.py
 
-from datetime import datetime
-from dateutil.parser import parse as dt
-from pprint import pprint
+# from datetime import datetime
+# from dateutil.parser import parse as dt
+# from pprint import pprint
 
-import pytest
+# import pytest
 
 # from pp.utils.options import (#OptionsLine,
 #                                 OptionsList,
@@ -41,11 +41,11 @@ import pytest
 #     assert opt_list.lines[3] == ""
 
 
-def test_cant_start_text_with_continuation():
-    text = "| more-options"
-    with pytest.raises(OptionLineError) as exc:
-        opt_list = OptionsList(text)
-    assert "You can't start" in exc.value.message
+# def test_cant_start_text_with_continuation():
+#     text = "| more-options"
+#     with pytest.raises(OptionLineError) as exc:
+#         opt_list = OptionsList(text)
+#     assert "You can't start" in exc.value.message
 
 
 # def test_parse_line():
@@ -167,31 +167,31 @@ def test_cant_start_text_with_continuation():
 #     assert sopts(source, max_line_length) == expected
 
 
-def test_init_with_long_lines():
-    text = """\
-location :: banbury | isleworth | kings-sutton | south-bank-centre
-            | whitnash
-"""
-    opt_list1 = OptionsList(text, 70)
-    assert str(opt_list1) == "location :: banbury | isleworth | " + \
-           "kings-sutton | south-bank-centre | whitnash"
-    opt_list2 = OptionsList(text)  # Default max_line_length = 60
-    # print("+" * 50)
-    # print(opt_list2)
-    # print("+" * 50)
-    assert str(opt_list2) == """\
-location :: banbury | isleworth | kings-sutton | south-bank-centre
-            | whitnash"""
-    opt_list3 = OptionsList(text, 45)
-    assert str(opt_list3) == """\
-location :: banbury | isleworth | kings-sutton
-            | south-bank-centre | whitnash"""
-    opt_list4 = OptionsList(text, 30)
-    assert str(opt_list4) == """\
-location :: banbury | isleworth
-            | kings-sutton
-            | south-bank-centre
-            | whitnash"""
+# def test_init_with_long_lines():
+#     text = """\
+# location :: banbury | isleworth | kings-sutton | south-bank-centre
+#             | whitnash
+# """
+#     opt_list1 = OptionsList(text, 70)
+#     assert str(opt_list1) == "location :: banbury | isleworth | " + \
+#            "kings-sutton | south-bank-centre | whitnash"
+#     opt_list2 = OptionsList(text)  # Default max_line_length = 60
+#     # print("+" * 50)
+#     # print(opt_list2)
+#     # print("+" * 50)
+#     assert str(opt_list2) == """\
+# location :: banbury | isleworth | kings-sutton | south-bank-centre
+#             | whitnash"""
+#     opt_list3 = OptionsList(text, 45)
+#     assert str(opt_list3) == """\
+# location :: banbury | isleworth | kings-sutton
+#             | south-bank-centre | whitnash"""
+#     opt_list4 = OptionsList(text, 30)
+#     assert str(opt_list4) == """\
+# location :: banbury | isleworth
+#             | kings-sutton
+#             | south-bank-centre
+#             | whitnash"""
 
 # def test_full_text_input():
 #     text = """\

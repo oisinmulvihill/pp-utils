@@ -76,7 +76,7 @@
 #         self.options = opts_set
 
 
-class OptionsList(object):
+# class OptionsList(object):
 
     # def __init__(self, source_text="", max_line_length=60):
     #     self.max_line_length = max_line_length
@@ -108,39 +108,39 @@ class OptionsList(object):
     #                   key, outer_opt_list.options.keys())
     #             raise OptionsSubsetError(msg)
 
-    def format_text(self, max_line_length=None):
-        """Prepare text for output in standard format. This is a public
-        function, to allow for various output max_line_lengths.
-        """
-        if max_line_length is None:
-            max_line_length = self.max_line_length
-        lines_out = []
-        try:
-            max_key_length = max(len(key) for key in self.options.keys())
-        except ValueError:
-            # self.options may be an empty dictionary
-            max_key_length = 0
-        # Allow 4 chars for " :: " in between key and options
-        max_option_length = max_line_length - max_key_length - 4
-        for line in self._lines:
-            if not line or line.startswith('#'):
-                lines_out.append(line)
-            else:
-                key, option_str = line.split(KEY_OPTIONS_SEPARATOR, 1)
-                continuation_lines = []
-                if len(option_str) > max_option_length:
-                    lines = self._split_options(option_str,
-                                                max_option_length)
-                    option_str = lines[0]
-                    continuation_lines = lines[1:]
-                new_line = "{1:{0}} {2} {3}".format(
-                    max_key_length, key, KEY_OPTIONS_SEPARATOR, option_str)
-                lines_out.append(new_line)
-                for cont_line in continuation_lines:
-                    new_line2 = "{1:{0}}    {2}".format(max_key_length,
-                                                        "", cont_line)
-                    lines_out.append(new_line2)
-        return "\n".join(lines_out)
+    # def format_text(self, max_line_length=None):
+    #     """Prepare text for output in standard format. This is a public
+    #     function, to allow for various output max_line_lengths.
+    #     """
+    #     if max_line_length is None:
+    #         max_line_length = self.max_line_length
+    #     lines_out = []
+    #     try:
+    #         max_key_length = max(len(key) for key in self.options.keys())
+    #     except ValueError:
+    #         # self.options may be an empty dictionary
+    #         max_key_length = 0
+    #     # Allow 4 chars for " :: " in between key and options
+    #     max_option_length = max_line_length - max_key_length - 4
+    #     for line in self._lines:
+    #         if not line or line.startswith('#'):
+    #             lines_out.append(line)
+    #         else:
+    #             key, option_str = line.split(KEY_OPTIONS_SEPARATOR, 1)
+    #             continuation_lines = []
+    #             if len(option_str) > max_option_length:
+    #                 lines = self._split_options(option_str,
+    #                                             max_option_length)
+    #                 option_str = lines[0]
+    #                 continuation_lines = lines[1:]
+    #             new_line = "{1:{0}} {2} {3}".format(
+    #                 max_key_length, key, KEY_OPTIONS_SEPARATOR, option_str)
+    #             lines_out.append(new_line)
+    #             for cont_line in continuation_lines:
+    #                 new_line2 = "{1:{0}}    {2}".format(max_key_length,
+    #                                                     "", cont_line)
+    #                 lines_out.append(new_line2)
+    #     return "\n".join(lines_out)
 
     # @property
     # def lines(self):
