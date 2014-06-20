@@ -7,9 +7,9 @@ from pprint import pprint
 
 import pytest
 
-from pp.utils.options import (#OptionsLine,
-                                OptionsList,
-                              OptionsLineError, OptionsSubsetError)
+# from pp.utils.options import (#OptionsLine,
+#                                 OptionsList,
+#                               OptionsLineError, OptionsSubsetError)
 
 
 # def _get_text(lines):
@@ -145,26 +145,26 @@ def test_cant_start_text_with_continuation():
 #     assert len(opt_list.rev_options) == 8
 
 
-def test_handles_continuation_lines():
-    text = """\
-location :: banbury | isleworth | kings-sutton | south-bank-centre
-           | whitnash
-"""
-    opt_list = OptionsList(text)
-    assert len(opt_list.options['location']) == 5
-    assert opt_list.rev_options['whitnash'] == 'location'
+# def test_handles_continuation_lines():
+#     text = """\
+# location :: banbury | isleworth | kings-sutton | south-bank-centre
+#            | whitnash
+# """
+#     opt_list = OptionsList(text)
+#     assert len(opt_list.options['location']) == 5
+#     assert opt_list.rev_options['whitnash'] == 'location'
 
-@pytest.mark.parametrize("source, max_line_length, expected", [
-    ("a | b | c", 20, ["a | b | c"]),
-    ("a | b | c | d | e", 5, ["a | b | c | d | e"]),
-    ("a | b | c | d | e", 4, ["a | b | c | d", "| e"]),
-    ("a | b | c | d | e", 2, ["a | b", "| c | d", "| e"]),
-    ("a | b | c", 1, ["a", "| b", "| c"]),
-])
-def test_split_options(source, max_line_length, expected):
-    opt_list = OptionsList()
-    sopts = opt_list._split_options
-    assert sopts(source, max_line_length) == expected
+# @pytest.mark.parametrize("source, max_line_length, expected", [
+#     ("a | b | c", 20, ["a | b | c"]),
+#     ("a | b | c | d | e", 5, ["a | b | c | d | e"]),
+#     ("a | b | c | d | e", 4, ["a | b | c | d", "| e"]),
+#     ("a | b | c | d | e", 2, ["a | b", "| c | d", "| e"]),
+#     ("a | b | c", 1, ["a", "| b", "| c"]),
+# ])
+# def test_split_options(source, max_line_length, expected):
+#     opt_list = OptionsList()
+#     sopts = opt_list._split_options
+#     assert sopts(source, max_line_length) == expected
 
 
 def test_init_with_long_lines():

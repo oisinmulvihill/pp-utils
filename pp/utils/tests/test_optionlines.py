@@ -237,7 +237,9 @@ def test_full_text_input_3():
 availability :: pm |am | eve | pm
 importance   :: a | c| b
 internet     :: connected | offline
-location     :: banbury | isleworth | kings-sutton | south-bank-centre| whitnash | bognor-regis | glasgow | worthing | lands-end||| shopping-in-leamington || deddington
+location     :: banbury | isleworth | kings-sutton | south-bank-centre
+                | whitnash | bognor-regis | glasgow | worthing
+                | lands-end||| shopping-in-leamington || deddington
 # Status uses words rather than dates now
 status       :: queued | started | nearly-done | finished | on-hold
 supermarket  :: morrisons | sainsburys | tesco | asda | m&s
@@ -246,8 +248,9 @@ weather      :: fine | rain | showers
 """
     # opt_list5 = OptionsList(text, 65)
     option_lines = OptionLines(source_text)
-    print("*" * 40)
-    print(option_lines)
+    assert len(option_lines) == 12
+    # print("*" * 40)
+    # print(option_lines)
     assert str(option_lines) == """\
 # environment.txt
 # For ease of reading and editing, using options format.
@@ -255,7 +258,10 @@ weather      :: fine | rain | showers
 availability :: am | eve | pm
 importance   :: a | b | c
 internet     :: connected | offline
-location     :: banbury | bognor-regis | deddington | glasgow | isleworth | kings-sutton | lands-end | shopping-in-leamington | south-bank-centre | whitnash | worthing
+location     :: banbury | bognor-regis | deddington | glasgow
+                | isleworth | kings-sutton | lands-end
+                | shopping-in-leamington | south-bank-centre
+                | whitnash | worthing
 # Status uses words rather than dates now
 status       :: finished | nearly-done | on-hold | queued | started
 supermarket  :: asda | m&s | morrisons | sainsburys | tesco
@@ -299,13 +305,56 @@ def test_option_lines_check_is_subset_of_bad_key():
     assert exc.value.message.startswith('"foo" not found as option key')
 
 
+@pytest.mark.parametrize("source_line, max_option_length, expected", [
+    ("a | b | c", 20, ["a | b | c"]),
+    ("a | b | c | d | e", 17, ["a | b | c | d | e"]),
+    ("a | b | c | d | e", 13, ["a | b | c | d", "| e"]),
+    ("a | b | c | d | e", 7, ["a | b", "| c | d", "| e"]),
+    ("a | b | c", 3, ["a", "| b", "| c"]),
+    ("banbury | isleworth | kings-sutton | south-bank-centre", 58,
+        ["banbury | isleworth | kings-sutton | south-bank-centre"]),
+])
+def test_wrap_options(source_line, max_option_length, expected):
+    opt_line = OptionLine()
+    opts_gen = (opt.strip() for opt in source_line.split('|'))
+    opt_line.options = set(opt for opt in opts_gen if len(opt))
+    # print(source_line, max_option_length)
+    # print(opt_line.options)
+    assert opt_line._wrap_options(max_option_length) == expected
+
+
 def test_handles_continuation_lines():
     source_text = """\
 location :: banbury | isleworth | kings-sutton | south-bank-centre
-           | whitnash
+            | whitnash
 """
     opt_lines = OptionLines(source_text)
+    assert len(opt_lines) == 1
     assert len(opt_lines.all_keys['location'].options) == 5
     assert opt_lines.all_options['whitnash'].key == 'location'
+    assert str(opt_lines) == """\
+location :: banbury | isleworth | kings-sutton | south-bank-centre
+            | whitnash"""
 
 
+def test_continuation_lines_2a333():
+    source_text = """\
+location1234 :: banbury | isleworth | kings-sutton | south-bank-centre
+                | whitnash | bognor-regis | glasgow | worthing
+                | lands-end||| shopping-in-leamington || deddington
+"""
+    expected = """\
+location1234 :: banbury | bognor-regis | deddington | glasgow
+                | isleworth | kings-sutton | lands-end
+                | shopping-in-leamington | south-bank-centre
+                | whitnash | worthing"""
+    opt_lines = OptionLines(source_text)
+    assert str(opt_lines) == expected
+
+
+def test_cant_start_text_with_continuation():
+    return #xxxxxxxxxxxxxxx
+    source_text = "| more-options"
+    with pytest.raises(OptionLineError) as exc:
+        opt_lines = OptionLines(source_text)
+    assert "You can't start" in exc.value.message

@@ -1,45 +1,45 @@
 # -*- coding: utf-8 -*-
 # pp/utils/options.py
 
-"""
-Options format is designed to make reading/writing data simple.
-Features:
-    Key to options separated by "::" to avoid confusion with ":" in text.
-    Options separated by vertical bar.
-    Options should be unique between keys, not just within one key.
-    Vertical bar starts continuation line
-    Options in each lines sorted
-    Line order and blank lines preserved
-    Comments preserved
+# """
+# Options format is designed to make reading/writing data simple.
+# Features:
+#     Key to options separated by "::" to avoid confusion with ":" in text.
+#     Options separated by vertical bar.
+#     Options should be unique between keys, not just within one key.
+#     Vertical bar starts continuation line
+#     Options in each lines sorted
+#     Line order and blank lines preserved
+#     Comments preserved
 
-Example data for TaskNav environment file:
+# Example data for TaskNav environment file:
 
-    # environment.txt
-    # For ease of reading and editing, using options format.
+#     # environment.txt
+#     # For ease of reading and editing, using options format.
 
-    availability :: am | eve | pm
-    importance   :: a | b | c
-    internet     :: connected | offline
-    location     :: banbury | isleworth | kings-sutton | south-bank-centre
-                    | whitnash
-    # Status uses words rather than dates now
-    status       :: queued | started | nearly-done | finished | on-hold
-    supermarket  :: morrisons | sainsburys | tesco
-    urgency      :: sometime | this-month | this-week | today | tomorrow
-    weather      :: fine | rain | showers
-"""
+#     availability :: am | eve | pm
+#     importance   :: a | b | c
+#     internet     :: connected | offline
+#     location     :: banbury | isleworth | kings-sutton | south-bank-centre
+#                     | whitnash
+#     # Status uses words rather than dates now
+#     status       :: queued | started | nearly-done | finished | on-hold
+#     supermarket  :: morrisons | sainsburys | tesco
+#     urgency      :: sometime | this-month | this-week | today | tomorrow
+#     weather      :: fine | rain | showers
+# """
 
-from pprint import pprint
+# from pprint import pprint
 
-KEY_OPTIONS_SEPARATOR = '::'
-
-
-class OptionsLineError(Exception):
-    pass
+# KEY_OPTIONS_SEPARATOR = '::'
 
 
-class OptionsSubsetError(Exception):
-    pass
+# class OptionsLineError(Exception):
+#     pass
+
+
+# class OptionsSubsetError(Exception):
+#     pass
 
 
 
@@ -78,18 +78,18 @@ class OptionsSubsetError(Exception):
 
 class OptionsList(object):
 
-    def __init__(self, source_text="", max_line_length=60):
-        self.max_line_length = max_line_length
-        self._lines = []
-        self.options = {}
-        self.rev_options = {}  # This is a reverse dictionary of self.options
-        self.parse_text(source_text)
+    # def __init__(self, source_text="", max_line_length=60):
+    #     self.max_line_length = max_line_length
+    #     self._lines = []
+    #     self.options = {}
+    #     self.rev_options = {}  # This is a reverse dictionary of self.options
+    #     self.parse_text(source_text)
 
-    def __repr__(self):
-        return str(self)
+    # def __repr__(self):
+    #     return str(self)
 
-    def __str__(self):
-        return self.format_text()
+    # def __str__(self):
+    #     return self.format_text()
 
     # def check_is_part_of(self, outer_opt_list):
     #     """Check that all option keys are found in outer_opt_list,
@@ -189,45 +189,45 @@ class OptionsList(object):
     #     opts_set = set(z.strip() for z in opts.split('|') if len(z.strip()))
     #     return key, opts_set
 
-    def _process_buffer(self, buffer_lines):
-        if buffer_lines is None:
-            return  # First time called
-        line = ''.join(buffer_lines)
-        # Pass through blank lines and comments
-        if not line or line.startswith('#'):
-            self._lines.append(line)
-        else:
-            key, opts_set = self._parse_line(line)
-            self.options[key] = opts_set
-            for opt in opts_set:
-                try:
-                    prev_key = self.rev_options[opt]
-                    msg = 'Duplicate options for different keys ' + \
-                          '("{0}{3}{1}" and "{2}{3}{1}")'
-                    raise OptionsLineError(msg.format(
-                        key, opt, prev_key, KEY_OPTIONS_SEPARATOR))
-                except KeyError:
-                    # This is the normal path
-                    self.rev_options[opt] = key
-            option_str = " | ".join(sorted(opts_set))
-            self._lines.append("{}{}{}".format(key, KEY_OPTIONS_SEPARATOR,
-                                               option_str))
+    # def _process_buffer(self, buffer_lines):
+    #     if buffer_lines is None:
+    #         return  # First time called
+    #     line = ''.join(buffer_lines)
+    #     # Pass through blank lines and comments
+    #     if not line or line.startswith('#'):
+    #         self._lines.append(line)
+    #     else:
+    #         key, opts_set = self._parse_line(line)
+    #         self.options[key] = opts_set
+    #         for opt in opts_set:
+    #             try:
+    #                 prev_key = self.rev_options[opt]
+    #                 msg = 'Duplicate options for different keys ' + \
+    #                       '("{0}{3}{1}" and "{2}{3}{1}")'
+    #                 raise OptionsLineError(msg.format(
+    #                     key, opt, prev_key, KEY_OPTIONS_SEPARATOR))
+    #             except KeyError:
+    #                 # This is the normal path
+    #                 self.rev_options[opt] = key
+    #         option_str = " | ".join(sorted(opts_set))
+    #         self._lines.append("{}{}{}".format(key, KEY_OPTIONS_SEPARATOR,
+    #                                            option_str))
 
-    def _split_options(self, option_str, max_line_length):
-        """Split options into multiple strings to deal with long lists"""
-        option_gen = (opt.strip() for opt in option_str.split('|'))
-        current_line = []
-        current_length = 0
-        lines = []
-        for opt in option_gen:
-            if current_length + len(opt) <= max_line_length:
-                current_line.append(opt)
-                current_length += len(opt)
-            else:
-                lines.append(' | '.join(current_line))
-                current_line = ['| ' + opt]  # Note leading '|'
-                current_length = len(opt)
-        if current_line:
-            lines.append(' | '.join(current_line))
-        return lines
+    # def _split_options(self, option_str, max_line_length):
+    #     """Split options into multiple strings to deal with long lists"""
+    #     option_gen = (opt.strip() for opt in option_str.split('|'))
+    #     current_line = []
+    #     current_length = 0
+    #     lines = []
+    #     for opt in option_gen:
+    #         if current_length + len(opt) <= max_line_length:
+    #             current_line.append(opt)
+    #             current_length += len(opt)
+    #         else:
+    #             lines.append(' | '.join(current_line))
+    #             current_line = ['| ' + opt]  # Note leading '|'
+    #             current_length = len(opt)
+    #     if current_line:
+    #         lines.append(' | '.join(current_line))
+    #     return lines
 
