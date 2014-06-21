@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# test_optionlines.py
+# pp/utils/test_optionlines.py
 
 from datetime import datetime
 from dateutil.parser import parse as dt
@@ -86,8 +86,8 @@ def test_task_line(source_line, is_task_line):
 
 @pytest.mark.parametrize("source_line, status_ch, status, emph_ch, emph", [
     ("* [x] Contact agency re contract", "x", "finished", "*", "urgent"),
-    ("  [>] Do this later", ">", "later", "", "not-urgent"),
-    ("[-] Cancelled this one", "-", "cancelled", "", "not-urgent"),
+    ("  [>] Do this later", ">", "later", "", "non-urgent"),
+    ("[-] Cancelled this one", "-", "cancelled", "", "non-urgent"),
     ("**[ ] Desperate measures", "", "to-do", "**", "today"),
 ])
 def test_task_line_status_text(source_line, status_ch, status, emph_ch, emph):
@@ -106,6 +106,12 @@ def test_not_an_option_line():
     assert option_line.indent == 2
     assert option_line.key is None
     assert not option_line.validates()
+
+
+def test_option_line_forces_lower_case_key_and_options():
+    source_line = "Importance :: A | b | C"
+    option_line = OptionLine(source_line)
+    assert option_line.text == "importance :: a | b | c"
 
 
 @pytest.mark.parametrize("source_line, key", [
@@ -170,7 +176,6 @@ defdef defdef
     assert option_lines.lines[0] == "# This is a comment"
     assert option_lines.lines[1].startswith("    imp")
     assert len(option_lines.lines) == 7
-    # assert 0,3
 
 
 def test_duplicate_option_keys_rejected():
@@ -266,6 +271,27 @@ urgency      :: sometime | this-month | this-week | today | tomorrow
 weather      :: fine | rain | showers"""
 
 
+def test_full_text_input_4():
+    source_text = """\
+# Try out some tasks. Where should the comments be attached?
+    # Indented comment
+Business
+* [/] Details of competitors
+      Send the spreadsheet of 60 online web apps
+**[ ] Prepare data for P11D
+Personal
+  [x] Buy cat food
+
+availability :: am | eve | pm
+importance   :: a | b | c
+internet     :: connected | offline
+urgency      :: sometime | this-month | this-week | today | tomorrow
+"""
+    option_lines = OptionLines(source_text)
+    print(option_lines)
+    assert str(option_lines) == source_text.rstrip()
+    assert 0, 56
+
 def test_option_lines_check_is_subset_of():
     outer_text = """\
 # environment, listing all possibilities.
@@ -327,7 +353,8 @@ location :: banbury | isleworth | kings-sutton | south-bank-centre
     assert len(opt_lines) == 1
     assert len(opt_lines.all_keys['location'].options) == 5
     assert opt_lines.all_options['whitnash'].key == 'location'
-    assert str(opt_lines) == """\
+    # Check that repr() gives the same result as str()
+    assert repr(opt_lines) == """\
 location :: banbury | isleworth | kings-sutton | south-bank-centre
             | whitnash"""
 

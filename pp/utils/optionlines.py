@@ -57,12 +57,17 @@ timeline
   date-finished
 
 TO-DO after all working:
-[ ] Duplicate keys across lines rejected
-[ ] duplicate_options_across_keys_rejected
-[ ] Options subset
-[ ] Continuation lines
-[ ] Alignment of double colons
-[ ] Subset return T/F or Exception?
+[x] Duplicate keys across lines rejected
+[x] duplicate_options_across_keys_rejected
+[x] Options subset
+[x] Continuation lines
+[x] Alignment of double colons
+[/] Subset return T/F or Exception?
+[x] OptionLine key and options forced to lower case
+[ ] Put tasks together, and options together?
+[ ] When changing the order:
+    [ ] Comments to stay with following line
+    [ ] Blanks to stay with following line
 """
 
 import sys
@@ -79,7 +84,7 @@ TASK_STATUS_DICT = {
     ">": "later",
 }
 TASK_EMPHASIS_DICT = {
-    "": "not-urgent",
+    "": "non-urgent",
     "*": "urgent",
     "**": "today",
 }
@@ -111,16 +116,13 @@ class BaseOptionLine(object):
 
     @property
     def text(self):
-        """Return the text value that follows any indent"""
+        """Return the text string that follows any white space indent"""
         return self._format_line()
 
     @abstractmethod
     def validates(self):
-        """This is called after _parse_line(), if defined."""
-
-    # @abstractmethod
-    # def parse_text(self, source_text):
-    #     pass
+        """This is called after _parse_line(), if defined.
+        Return True if source_line is the given line type."""
 
     def _format_line(self):
         return self._text
@@ -184,16 +186,14 @@ class OptionLine(BaseOptionLine):
     def _parse_line(self):
         try:
             split_text = self._text.split(KEY_OPTIONS_SEPARATOR, 1)
-            self.key, opts = [x.strip() for x in split_text]
-            # This is an OptionLine: check that key is a single word
+            self.key, opts = [x.strip().lower() for x in split_text]
+            # This is an OptionLine, so check that key is a single word
             if len(self.key.split()) != 1:
                 msg = 'Bad key "{}" in line "{}"'
                 raise OptionLineError(msg.format(self.key, self._text))
-            # self.options = set(z.strip() for z in opts.split('|')
-            #                    if len(z.strip()))
-            self.options = set(x for x in (z.strip()
-                                           for z in opts.split('|'))
-                               if len(x))
+            opt_gen = (opt.strip() for opt in opts.split('|'))
+            # Check length of opt rather than bool() to allow for opt=0
+            self.options = set(opt for opt in opt_gen if len(opt))
         except ValueError:
             # KEY_OPTIONS_SEPARATOR was missing, so not an OptionLine
             self.key = None
@@ -256,6 +256,8 @@ class TaskLine(BaseOptionLine):
             self.status_ch = status.strip()
             self.status = TASK_STATUS_DICT[self.status_ch]
             self.task_text = parts[1].strip()
+            print("--{:15}{:3} ({}, {})".format(
+                self.task_text[:15], "...", self.emphasis, self.status))
         except (ValueError, IndexError, KeyError):
             # ValueError if brackets are missing
             # IndexError if there is no parts[1], i.e. only parts[0]
@@ -286,6 +288,8 @@ class OptionLineFactory(object):
                 line_obj.lines_container = self.lines_container
                 return line_obj
         else:
+            # TO-DO How do we get here if
+            # OrdinaryLine takes anything else?
             msg = 'Unknown line type for option line "{}"'
             raise OptionLineError(msg.format(source_line))
 
@@ -312,8 +316,11 @@ class OptionLines(object):
         return self.format_text()
 
     def check_is_subset_of(self, outer_opt_lines):
-        """Return True if all option keys are found in outer_opt_lines,
+        """Return if all option keys are found in outer_opt_lines,
         and for each key, the options are in the outer_opt_lines options.
+        Otherwise, raise OptionSubsetError, with error message. This was
+        done (rather than just return T/F) to give the user some indication
+        of what has gone wrong.
         """
         # for key, inner_options in self.options.iteritems():
         for key in self.all_keys:
