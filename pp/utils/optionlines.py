@@ -64,6 +64,7 @@ TO-DO after all working:
 [x] Alignment of double colons
 [/] Subset return T/F or Exception?
 [x] OptionLine key and options forced to lower case
+[ ] Task continuation lines
 [ ] Put tasks together, and options together?
 [ ] When changing the order:
     [ ] Comments to stay with following line
@@ -74,8 +75,10 @@ import sys
 from abc import abstractmethod
 from pprint import pprint
 
+COMMENT_CHAR = '#'
 KEY_OPTIONS_SEPARATOR = '::'
 MAX_OPTION_LINE_LENGTH = 70
+OPT_CONTIN_CHAR = '|'
 TASK_STATUS_DICT = {
     "": "to-do",
     "/": "started",
@@ -143,7 +146,15 @@ class CommentLine(BaseOptionLine):
 
     def validates(self):
         """True if the source_line is a comment"""
-        return self._text.startswith("#")
+        return self._text.startswith(COMMENT_CHAR)
+
+
+class OptionContinuationLine(BaseOptionLine):
+    """Any line whose first non-white-space char is '|'
+    """
+
+    def validates(self):
+        return self._text.startswith(OPT_CONTIN_CHAR)
 
 
 class OptionLine(BaseOptionLine):
@@ -153,6 +164,7 @@ class OptionLine(BaseOptionLine):
     # def __init__(self, source_line=""):
     #     super(OptionLine, self).__init__(source_line)
     #     # self.max_key_length = 0  # Increases width of first column, if > 0
+    option_join_str = " {} ".format(OPT_CONTIN_CHAR)
 
     def validates(self):
         """This is an OptionLine if we have successfully parsed a key"""
@@ -162,7 +174,7 @@ class OptionLine(BaseOptionLine):
         """Return canonical text form of option line. This may be split
         into multiple lines, if line would exceed max_line_length.
         """
-        options_str = " | ".join(sorted(self.options))
+        options_str = self.option_join_str.join(sorted(self.options))
         # NB String format can have arg {0} here as "" but not 0
         try:
             max_key_len = self.lines_container.max_key_length or ""
@@ -191,7 +203,7 @@ class OptionLine(BaseOptionLine):
             if len(self.key.split()) != 1:
                 msg = 'Bad key "{}" in line "{}"'
                 raise OptionLineError(msg.format(self.key, self._text))
-            opt_gen = (opt.strip() for opt in opts.split('|'))
+            opt_gen = (opt.strip() for opt in opts.split(OPT_CONTIN_CHAR))
             # Check length of opt rather than bool() to allow for opt=0
             self.options = set(opt for opt in opt_gen if len(opt))
         except ValueError:
@@ -214,15 +226,16 @@ class OptionLine(BaseOptionLine):
                 current_length += 3 + len(opt)
             else:
                 # Need to start a new line
-                result_lines.append(' | '.join(current_line))
-                current_line = ['| ' + opt]  # Note leading '|'
+                result_lines.append(self.option_join_str.join(current_line))
+                current_line = [OPT_CONTIN_CHAR + ' ' + opt]
                 current_length = 2 + len(opt)
         if current_line:
-            result_lines.append(' | '.join(current_line))
+            result_lines.append(self.option_join_str.join(current_line))
         return result_lines
 
 
-class OrdinaryLine(BaseOptionLine):
+# class OrdinaryLine(BaseOptionLine):
+class TaskContinuationLine(BaseOptionLine):
 
     def validates(self):
         return len(self._text) > 0
@@ -231,6 +244,7 @@ class OrdinaryLine(BaseOptionLine):
 class TaskLine(BaseOptionLine):
     """ Line that begins with '[' and ']' within the first 6 chars,
         to form a status box.
+        Includes continuation lines
     e.g.
           [ ] Fix the bathroom door
         * [>] Apply for deed of variation
@@ -256,7 +270,7 @@ class TaskLine(BaseOptionLine):
             self.status_ch = status.strip()
             self.status = TASK_STATUS_DICT[self.status_ch]
             self.task_text = parts[1].strip()
-            print("--{:15}{:3} ({}, {})".format(
+            print("-->>--{:15}{:3} ({}, {})".format(
                 self.task_text[:15], "...", self.emphasis, self.status))
         except (ValueError, IndexError, KeyError):
             # ValueError if brackets are missing
@@ -275,7 +289,8 @@ class OptionLineFactory(object):
         BlankLine,
         TaskLine,
         OptionLine,
-        OrdinaryLine,  # i.e. anything else
+        OptionContinuationLine,
+        TaskContinuationLine,
     ]
 
     def __init__(self, lines_container=None):
@@ -288,8 +303,6 @@ class OptionLineFactory(object):
                 line_obj.lines_container = self.lines_container
                 return line_obj
         else:
-            # TO-DO How do we get here if
-            # OrdinaryLine takes anything else?
             msg = 'Unknown line type for option line "{}"'
             raise OptionLineError(msg.format(source_line))
 
@@ -303,8 +316,9 @@ class OptionLines(object):
         self._obj_lines = []  # Or use a MutableMapping instead?
         self.all_keys = {}
         self.all_options = {}
+        self.tasks = []
         self.line_factory = OptionLineFactory(self)
-        self.parse_text(source_text)
+        self.parse_text2(source_text)
 
     def __len__(self):
         return len(self._obj_lines)
@@ -315,7 +329,7 @@ class OptionLines(object):
     def __str__(self):
         return self.format_text()
 
-    def check_is_subset_of(self, outer_opt_lines):
+    def check_is_option_subset_of(self, outer_opt_lines):
         """Return if all option keys are found in outer_opt_lines,
         and for each key, the options are in the outer_opt_lines options.
         Otherwise, raise OptionSubsetError, with error message. This was
@@ -358,17 +372,36 @@ class OptionLines(object):
     def lines(self):
         return self.format_text().splitlines()
 
+    def parse_text2(self, source_text):
+        self._clear_data()
+        self.source_text = source_text.rstrip()
+        raw_lines = []
+        for source_line in self.source_text.splitlines():
+            line_obj = self.line_factory.make_line(source_line)
+            raw_lines.append(line_obj)
+        print('/' * 50)
+        for obj1 in raw_lines:
+            print(obj1.text[:50], obj1.__class__.__name__)
+        print('/' * 50)
+
+        self.parse_text(source_text)
+
+
     def parse_text(self, source_text):
         self._clear_data()
         self.source_text = source_text.rstrip()
+
+        for source_line in self.source_text.splitlines():
+            line_obj = OptionLineFactory()
         # source_lines_gen = (line.strip()
         #                     for line in self.source_text.splitlines())
         buffer_lines = None
         for source_line in self.source_text.splitlines():
-            if source_line.lstrip().startswith('|'):
+            if source_line.lstrip().startswith(OPT_CONTIN_CHAR):
                 if not buffer_lines:
-                    msg = "You can't start text with '|': {}"
-                    raise OptionLineError(msg.format(source_line))
+                    msg = "You can't start text with '{}': {}"
+                    raise OptionLineError(msg.format(OPT_CONTIN_CHAR,
+                                                     source_line))
                 buffer_lines.append(source_line.rstrip())
             else:
                 # Current is non-continuation line, so process buffer_lines

@@ -7,7 +7,8 @@ from pprint import pprint
 
 import pytest
 
-from pp.utils.optionlines import (CommentLine, OptionLine, OrdinaryLine,
+from pp.utils.optionlines import (CommentLine, OptionLine,
+                                  TaskContinuationLine,
                                   TaskLine, BlankLine,
                                   OptionLines,
                                   OptionLineFactory,
@@ -101,7 +102,7 @@ def test_task_line_status_text(source_line, status_ch, status, emph_ch, emph):
 
 
 def test_not_an_option_line():
-    source_line = "  Just an ordinary piece of text"
+    source_line = "  Continuation line for some task"
     option_line = OptionLine(source_line)
     assert option_line.indent == 2
     assert option_line.key is None
@@ -127,7 +128,8 @@ def test_invalid_option_line_with_bad_keys_rejected(source_line, key):
 @pytest.mark.parametrize("source_line, class_name", [
     ("# Starting with a comment", 'CommentLine'),
     ("importance :: a | b | c", 'OptionLine'),
-    ("Mary had a little lamb", 'OrdinaryLine'),
+    ("[ ] Some task", 'TaskLine'),
+    ("Mary had a little lamb", 'TaskContinuationLine'),
     ("", 'BlankLine'),
     ("                ", 'BlankLine'),
     ("\n", 'BlankLine'),
@@ -143,11 +145,12 @@ def test_option_line_factory_from_text_block():
     source_text = """\
 # Starting with a comment
 importance :: a | b | c
+[ ] Some task
 Mary had a little lamb
     [x] This task has been finished
 
 
-asdasd asdasd
+# asdasd asdasd
 """
     factory = OptionLineFactory()
     class_names = []
@@ -155,9 +158,10 @@ asdasd asdasd
     for source_line in source_text.rstrip().splitlines():
         line_obj = factory.make_line(source_line)
         class_names.append(line_obj.__class__.__name__)
-    assert class_names == ['CommentLine', 'OptionLine', 'OrdinaryLine',
+    assert class_names == ['CommentLine', 'OptionLine', 'TaskLine',
+                           'TaskContinuationLine',
                            'TaskLine',
-                           'BlankLine', 'BlankLine', 'OrdinaryLine']
+                           'BlankLine', 'BlankLine', 'CommentLine']
 
 
 def test_option_lines_from_text_block():
@@ -292,7 +296,7 @@ urgency      :: sometime | this-month | this-week | today | tomorrow
     assert str(option_lines) == source_text.rstrip()
     assert 0, 56
 
-def test_option_lines_check_is_subset_of():
+def test_option_lines_check_is_option_subset_of():
     outer_text = """\
 # environment, listing all possibilities.
 availability :: am | eve | pm
@@ -304,27 +308,27 @@ weather      :: rain | showers"""
     opt_lines_outer = OptionLines(outer_text)
     opt_lines_inner = OptionLines(inner_text)
     # Raises exception if not subset
-    opt_lines_inner.check_is_subset_of(opt_lines_outer)
+    opt_lines_inner.check_is_option_subset_of(opt_lines_outer)
 
 
-def test_option_lines_check_is_subset_of_bad_option():
+def test_option_lines_check_is_option_subset_of_bad_option():
     outer_text = "weather :: fine | rain | showers"
     inner_text = "weather :: cloudy"
     opt_lines_outer = OptionLines(outer_text)
     opt_lines_inner = OptionLines(inner_text)
     with pytest.raises(OptionSubsetError) as exc:
-        opt_lines_inner.check_is_subset_of(opt_lines_outer)
+        opt_lines_inner.check_is_option_subset_of(opt_lines_outer)
     assert exc.value.message.startswith(
         "['cloudy'] not found in \"weather\" options")
 
 
-def test_option_lines_check_is_subset_of_bad_key():
+def test_option_lines_check_is_option_subset_of_bad_key():
     outer_text = "weather :: fine | rain | showers"
     inner_text = "foo :: bar"
     opt_lines_outer = OptionLines(outer_text)
     opt_lines_inner = OptionLines(inner_text)
     with pytest.raises(OptionSubsetError) as exc:
-        opt_lines_inner.check_is_subset_of(opt_lines_outer)
+        opt_lines_inner.check_is_option_subset_of(opt_lines_outer)
     assert exc.value.message.startswith('"foo" not found as option key')
 
 
@@ -344,7 +348,7 @@ def test_wrap_options(source_line, max_option_length, expected):
     assert opt_line._wrap_options(max_option_length) == expected
 
 
-def test_handles_continuation_lines():
+def test_handles_option_continuation_lines():
     source_text = """\
 location :: banbury | isleworth | kings-sutton | south-bank-centre
             | whitnash
@@ -359,7 +363,7 @@ location :: banbury | isleworth | kings-sutton | south-bank-centre
             | whitnash"""
 
 
-def test_continuation_lines_2():
+def test_option_continuation_lines_2():
     source_text = """\
 location1234 :: banbury | isleworth | kings-sutton | south-bank-centre
                 | whitnash | bognor-regis | glasgow | worthing
@@ -374,11 +378,26 @@ location1234 :: banbury | bognor-regis | deddington | glasgow
     assert str(opt_lines) == expected
 
 
-def test_cant_start_text_with_continuation():
+def test_cant_start_text_with_option_continuation_char():
     source_text = "| more-options"
     with pytest.raises(OptionLineError) as exc:
         opt_lines = OptionLines(source_text)
     assert "You can't start" in exc.value.message
+
+
+def test_handles_task_continuation_lines345():
+    source_text = """\
+  [ ] Some task to-do
+      More details of task
+      And some more info
+alphabet :: a | b | c
+            | d | e | f
+* [ ] This is a second task
+      Need to look at this web site: http://www.example.com
+"""
+    opt_lines = OptionLines(source_text)
+    assert len(opt_lines) == 2
+    assert len(opt_lines.tasks == 2)
 
 
 def test_init_with_long_lines():
