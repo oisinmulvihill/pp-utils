@@ -82,29 +82,30 @@ def test_task_line(source_line, is_task_line):
     task_line = TaskLine(source_line)
     assert task_line.validates() == is_task_line
     if is_task_line:
-        assert task_line.text == source_line.strip()
+        assert task_line.text == source_line.rstrip()
 
 
-@pytest.mark.parametrize("source_line, status_ch, status, emph_ch, emph", [
+@pytest.mark.parametrize("source_line, status_ch, status, emph_chrs, emph", [
     ("* [x] Contact agency re contract", "x", "finished", "*", "urgent"),
     ("  [>] Do this later", ">", "later", "", "non-urgent"),
-    ("[-] Cancelled this one", "-", "cancelled", "", "non-urgent"),
+    ("  [-] Cancelled this one", "-", "cancelled", "", "non-urgent"),
     ("**[ ] Desperate measures", "", "to-do", "**", "today"),
 ])
-def test_task_line_status_text(source_line, status_ch, status, emph_ch, emph):
+def test_task_line_status_text(source_line, status_ch, status,
+                               emph_chrs, emph):
     task_line = TaskLine(source_line)
     assert task_line.status_ch == status_ch
     assert task_line.status == status
-    assert task_line.emphasis_ch == emph_ch
+    assert task_line.emphasis_chars == emph_chrs
     assert task_line.emphasis == emph
     # assert task_line.task_text == "Contact agency re contract"
-    assert task_line.text == source_line.strip()
+    assert task_line.text == source_line.rstrip()
 
 
 def test_not_an_option_line():
     source_line = "  Continuation line for some task"
     option_line = OptionLine(source_line)
-    assert option_line.indent == 2
+    assert option_line.indent == 0  # Options indents are always 0
     assert option_line.key is None
     assert not option_line.validates()
 
@@ -163,36 +164,98 @@ Mary had a little lamb
                            'TaskLine',
                            'BlankLine', 'BlankLine', 'CommentLine']
 
-
-def test_option_lines_from_text_block238():
+def test_task_lines_with_indents():
     source_text = """\
-      [ ] Its fleece was white as snow
+  [ ] Task 1
+      [ ] Mary had a little lamb,
+          Its fleece was white as snow.
+          And everywhere that Mary went
+          The lamb was sure to go.
+    [ ] There once was a man with a beard
+        Who said it is just as I feared.
 """
-# # This is a comment
-# importance :: a | b | c
-#     urgency   :: 2 | 1 | 2 | 3
-#   [x] This task has been finished
-# * [ ] Mary had a little lamb
-#       [ ] Its fleece was white as snow
-# """
-
-#
-#   [x] This task has been finished
-#       Mary had a little lamb
-
-#   [ ] Another task
-# """
     option_lines = OptionLines(source_text)
-    # print(option_lines)
-    print("=== Source ===")
-    print(source_text.rstrip())
-    print("=== Result ===")
-    print(option_lines)
-    print("==============")
     assert str(option_lines) == source_text.rstrip()
+
+
+def test_task_lines_with_missing_two_space_indent():
+    # Initial two spaces for asterisks have been left out
+    source_text = """\
+[ ] Task 3 with indent missing
+    Continuation line for task 3
+"""
+    option_lines = OptionLines(source_text)
+    expected = """\
+  [ ] Task 3 with indent missing
+      Continuation line for task 3
+"""
+    assert str(option_lines) == expected.rstrip()
+
+
+def test_option_lines_correct_indents():
+    source_text = """\
+importance :: a | b | c
+    urgency   :: 2 | 1 | 2 | 3
+"""
+    expected = """\
+importance :: a | b | c
+urgency    :: 1 | 2 | 3
+"""
+    option_lines = OptionLines(source_text)
+    assert str(option_lines) == expected.rstrip()
+
+
+def test_option_lines_from_text_block():
+    source_text = """\
+# This is a comment
+importance :: a | b | c
+    urgency   :: 2 | 1 | 2 | 3
+  [x] This task has been finished
+* [ ] This task is more urgent
+      Do it this week
+**[ ] Do this one today
+      But what is it?
+      [ ] Mary had a little lamb,
+          Its fleece was white as snow.
+          And everywhere that Mary went
+          The lamb was sure to go.
+    [ ] There once was a man with a beard
+        Who said it is just as I feared.
+[ ] Task 3 with indent missing
+    Continuation line for task 3
+
+  [ ] Another final task
+"""
+    expected = """\
+# This is a comment
+importance :: a | b | c
+urgency    :: 1 | 2 | 3
+  [x] This task has been finished
+* [ ] This task is more urgent
+      Do it this week
+**[ ] Do this one today
+      But what is it?
+      [ ] Mary had a little lamb,
+          Its fleece was white as snow.
+          And everywhere that Mary went
+          The lamb was sure to go.
+    [ ] There once was a man with a beard
+        Who said it is just as I feared.
+  [ ] Task 3 with indent missing
+      Continuation line for task 3
+
+  [ ] Another final task
+"""
+    option_lines = OptionLines(source_text)
+    # print("=== Source ===")
+    # print(source_text.rstrip())
+    # print("=== Result ===")
+    # print(option_lines)
+    # print("==============")
+    assert str(option_lines) == expected.rstrip()
     assert option_lines.lines[0] == "# This is a comment"
     assert option_lines.lines[1].startswith("importance")
-    assert len(option_lines.lines) == 7
+    assert len(option_lines.lines) == 18
 
 
 def test_duplicate_option_keys_rejected():
@@ -307,7 +370,7 @@ urgency      :: sometime | this-month | this-week | today | tomorrow
     option_lines = OptionLines(source_text)
     print(option_lines)
     assert str(option_lines) == source_text.rstrip()
-    assert 0, 56
+    # assert 0, 56
 
 def test_option_lines_check_is_option_subset_of():
     outer_text = """\

@@ -64,14 +64,14 @@ TO-DO after all working:
 [x] Alignment of double colons
 [/] Subset return T/F or Exception?
 [x] OptionLine key and options forced to lower case
-[ ] Task continuation lines
+[x] Task continuation lines
+[x] Sort out the indents in the output
 [ ] Put tasks together, and options together?
 [ ] When changing the order:
     [ ] Comments to stay with following line
     [ ] Blanks to stay with following line
 Next steps
 ==========
-[ ] Sort out the indents in the output
 """
 
 import sys
@@ -122,6 +122,12 @@ class BaseOptionLine(object):
         self.lines_container = None
         self._parse_line()
 
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return " " * self.indent + self.text
+
     @property
     def text(self):
         """Return the text string that follows any white space indent"""
@@ -157,6 +163,8 @@ class CommentLine(BaseOptionLine):
 class ContinuationLine(BaseOptionLine):
     """Line to be attached to previous non-continuation line"""
 
+    indent_extra = 0
+
 
 class OptionContinuationLine(ContinuationLine):
     """Any line whose first non-white-space char is '|'
@@ -167,7 +175,8 @@ class OptionContinuationLine(ContinuationLine):
 
 
 class OptionLine(BaseOptionLine):
-    """A line that has a key, then the double colon, with 0 to many options
+    """A line that has a key, then the double colon, with 0 to many options.
+    All indents for options are cancelled.
     """
 
     # def __init__(self, source_line=""):
@@ -179,6 +188,7 @@ class OptionLine(BaseOptionLine):
         self.key = None
         self.options = None
         super(OptionLine, self).__init__(source_line)
+        self.indent = 0
 
     def validates(self):
         """This is an OptionLine if we have successfully parsed a key"""
@@ -250,8 +260,13 @@ class OptionLine(BaseOptionLine):
 
 class TaskContinuationLine(ContinuationLine):
 
+    indent_extra = 6
+
     def validates(self):
         return len(self._text) > 0
+
+    def _format_line(self):
+        return self._text
 
 
 class TaskLine(BaseOptionLine):
@@ -286,7 +301,8 @@ class TaskLine(BaseOptionLine):
             self.task_text = parts[1].strip()
             # So this is a task. Decrement indent by 2 if no emphasis
             if not self.emphasis_chars:
-                self.indent -= 2
+                # Avoid going negative if the initial indent is missing
+                self.indent = max(self.indent - 2, 0)
             print(">>----{:15}{:3} ({}, {})".format(
                 self.task_text[:15], "...", self.emphasis, self.status))
         except (ValueError, IndexError, KeyError):
@@ -337,7 +353,7 @@ class OptionLines(object):
         self.all_options = {}
         self.tasks = []
         self.line_factory = OptionLineFactory(self)
-        self.parse_text2(source_text)
+        self.parse_text(source_text)
 
     def __len__(self):
         return len(self._obj_lines)
@@ -385,7 +401,7 @@ class OptionLines(object):
         output_lines = []
         # output_lines.append(">>>>>")
         for line_obj in self._obj_lines:
-            output_lines.append(" " * line_obj.indent + line_obj.text)
+            output_lines.append(str(line_obj))
         # output_lines.append("<<<<<")
         return "\n".join(output_lines)
 
@@ -393,7 +409,12 @@ class OptionLines(object):
     def lines(self):
         return self.format_text().splitlines()
 
-    def parse_text2(self, source_text):
+    def _dump_line(self, label, line_obj):
+        return "[{} {}>>] {} ({})".format(label, line_obj.indent,
+                                          line_obj.text[:50],
+                                          line_obj.__class__.__name__)
+
+    def parse_text(self, source_text):
         '''
         Need to have state transition diagram here
         OptionLine
@@ -404,13 +425,13 @@ class OptionLines(object):
         What about superclass
         '''
         self._clear_data()
+        # Leading spaces are significant
         self.source_text = source_text.rstrip()
         raw_lines = []
         prev_line_obj = None
         for source_line in self.source_text.splitlines():
             line_obj = self.line_factory.make_line(source_line)
-            print("raw >>{}".format(line_obj.indent), line_obj.text[:50],
-                line_obj.__class__.__name__)
+            print(self._dump_line("A", line_obj))
             if isinstance(line_obj, OptionContinuationLine):
                 if (isinstance(prev_line_obj, OptionLine) or
                     isinstance(prev_line_obj, OptionContinuationLine)):
@@ -431,23 +452,26 @@ class OptionLines(object):
                 prev_line_obj = line_obj
         print('/1' * 35)
         for obj1 in raw_lines:
-            print(obj1.text[:50], obj1.__class__.__name__)
+            print(self._dump_line("B", obj1))
             for cont_line in obj1.continuation_line_objs:
-                print("......... {}".format(cont_line.text))
-            cont_lines_text = [cont_line.text
+                cont_line.indent = obj1.indent + cont_line.indent_extra
+                print("---+++---{}".format(str(cont_line)))
+            ##cont_lines_text = [cont_line.text
+            cont_lines_text = [str(cont_line)
                                for cont_line in obj1.continuation_line_objs]
             complete_text = "\n".join([obj1.text] + cont_lines_text)
             print("-" * 45 + " Input text")
             print(complete_text)
-            line_obj = self.line_factory.make_line(complete_text)
-            self._obj_lines.append(line_obj)
-            if isinstance(line_obj, OptionLine):
-                self._check_for_option_duplication(line_obj)
-            elif isinstance(line_obj, TaskLine):
-                self.tasks.append(line_obj)
+            line_obj2 = self.line_factory.make_line(complete_text)
+            line_obj2.indent = obj1.indent
+            self._obj_lines.append(line_obj2)
+            if isinstance(line_obj2, OptionLine):
+                self._check_for_option_duplication(line_obj2)
+            elif isinstance(line_obj2, TaskLine):
+                self.tasks.append(line_obj2)
             print("{} Output text, plus {} spaces indent".format(
-                "-" * 45, line_obj.indent))
-            print(line_obj.text)
+                "-" * 45, line_obj2.indent))
+            print(line_obj2.text)
             print("." * 75)
         print('\\2' * 35)
 
@@ -459,12 +483,12 @@ class OptionLines(object):
         #      self._obj_lines.append(line_obj)
         #      if isinstance(line_obj, OptionLine):
         #          self._check_for_option_duplication(line_obj)
-        # # self.parse_text(source_text)
+        # # self.parse_text0(source_text)
         # complete_line = "\n".join()
 
         self._calc_maximum_key_length()
 
-    # def parse_text(self, source_text):
+    # def parse_text0(self, source_text):
     #     self._clear_data()
     #     self.source_text = source_text.rstrip()
 
