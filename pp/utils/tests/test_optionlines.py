@@ -164,21 +164,34 @@ Mary had a little lamb
                            'BlankLine', 'BlankLine', 'CommentLine']
 
 
-def test_option_lines_from_text_block():
+def test_option_lines_from_text_block238():
     source_text = """\
-# This is a comment
-    importance :: a | b | c
-Mary had a little lamb
-    [x] This task has been finished
-
-
-defdef defdef
+      [ ] Its fleece was white as snow
 """
+# # This is a comment
+# importance :: a | b | c
+#     urgency   :: 2 | 1 | 2 | 3
+#   [x] This task has been finished
+# * [ ] Mary had a little lamb
+#       [ ] Its fleece was white as snow
+# """
+
+#
+#   [x] This task has been finished
+#       Mary had a little lamb
+
+#   [ ] Another task
+# """
     option_lines = OptionLines(source_text)
     # print(option_lines)
+    print("=== Source ===")
+    print(source_text.rstrip())
+    print("=== Result ===")
+    print(option_lines)
+    print("==============")
     assert str(option_lines) == source_text.rstrip()
     assert option_lines.lines[0] == "# This is a comment"
-    assert option_lines.lines[1].startswith("    imp")
+    assert option_lines.lines[1].startswith("importance")
     assert len(option_lines.lines) == 7
 
 
@@ -211,8 +224,8 @@ supermarket :: morrisons | sainsburys | tesco
 """
     option_lines = OptionLines("# This will be overwritten")
     option_lines.parse_text(source_text)
-    assert 'started' in option_lines.all_keys['status'].options
-    assert len(option_lines.all_keys['status'].options) == 5
+    assert 'started' in option_lines.option_keys['status'].options
+    assert len(option_lines.option_keys['status'].options) == 5
     assert len(option_lines.all_options) == 8
 
 
@@ -224,11 +237,11 @@ importance   :: b | c | a
 internet     :: offline | connected | offline
 """
     option_lines = OptionLines(source_text)
-    assert option_lines.all_keys['availability'
+    assert option_lines.option_keys['availability'
                                  ].options == set(['am', 'eve', 'pm'])
-    assert option_lines.all_keys['importance'
+    assert option_lines.option_keys['importance'
                                  ].options == set(['a', 'b', 'c'])
-    assert option_lines.all_keys['internet'
+    assert option_lines.option_keys['internet'
                                  ].options == set(['connected', 'offline'])
     assert option_lines.lines[1] == "importance   :: a | b | c"
     assert str(option_lines) == """\
@@ -279,11 +292,11 @@ def test_full_text_input_4():
     source_text = """\
 # Try out some tasks. Where should the comments be attached?
     # Indented comment
-Business
+# TO-DO Make this a heading: Business
 * [/] Details of competitors
       Send the spreadsheet of 60 online web apps
 **[ ] Prepare data for P11D
-Personal
+# TO-DO Make this a heading: Personal
   [x] Buy cat food
 
 availability :: am | eve | pm
@@ -355,7 +368,7 @@ location :: banbury | isleworth | kings-sutton | south-bank-centre
 """
     opt_lines = OptionLines(source_text)
     assert len(opt_lines) == 1
-    assert len(opt_lines.all_keys['location'].options) == 5
+    assert len(opt_lines.option_keys['location'].options) == 5
     assert opt_lines.all_options['whitnash'].key == 'location'
     # Check that repr() gives the same result as str()
     assert repr(opt_lines) == """\
@@ -382,7 +395,7 @@ def test_cant_start_text_with_option_continuation_char():
     source_text = "| more-options"
     with pytest.raises(OptionLineError) as exc:
         opt_lines = OptionLines(source_text)
-    assert "You can't start" in exc.value.message
+    assert exc.value.message.startswith("Bad option line sequence")
 
 
 def test_handles_task_continuation_lines345():
@@ -396,8 +409,11 @@ alphabet :: a | b | c
       Need to look at this web site: http://www.example.com
 """
     opt_lines = OptionLines(source_text)
-    assert len(opt_lines) == 2
-    assert len(opt_lines.tasks == 2)
+    print(opt_lines)
+    assert len(opt_lines) == 3
+    assert len(opt_lines.tasks) == 2
+    assert len(opt_lines.option_keys) == 1
+    assert len(opt_lines.all_options) == 6
 
 
 def test_init_with_long_lines():
