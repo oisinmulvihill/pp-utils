@@ -6,7 +6,9 @@ from dateutil.parser import parse as dt
 from pprint import pprint
 
 import pytest
+import mock
 
+# import pp.utils.optionlines.OptionLineFactory as OptLineFactory
 from pp.utils.optionlines import (CommentLine, OptionLine,
                                   TaskContinuationLine,
                                   TaskLine, BlankLine,
@@ -36,6 +38,8 @@ def test_valid_option_line():
     assert option_line.options == set(["a", "b", "c"])
     assert option_line.validates()
     assert option_line.text == source_line
+    assert str(option_line) == source_line
+    assert repr(option_line) == source_line
 
 
 def test_empty_option_items_ignored():
@@ -86,9 +90,9 @@ def test_task_line(source_line, is_task_line):
 
 
 @pytest.mark.parametrize("source_line, status_ch, status, emph_chrs, emph", [
-    ("* [x] Contact agency re contract", "x", "finished", "*", "urgent"),
-    ("  [>] Do this later", ">", "later", "", "non-urgent"),
-    ("  [-] Cancelled this one", "-", "cancelled", "", "non-urgent"),
+    ("* [x] Contact agency re contract", "x", "finished", "*", "this-week"),
+    ("  [>] Do this later", ">", "later", "", "sometime"),
+    ("  [-] Cancelled this one", "-", "cancelled", "", "sometime"),
     ("**[ ] Desperate measures", "", "to-do", "**", "today"),
 ])
 def test_task_line_status_text(source_line, status_ch, status,
@@ -137,9 +141,18 @@ def test_invalid_option_line_with_bad_keys_rejected(source_line, key):
 ])
 def test_option_line_factory_individual_lines(source_line, class_name):
     factory = OptionLineFactory()
-    lines = []
+    # lines = []
     line_obj = factory.make_line(source_line)
     assert line_obj.__class__.__name__ == class_name
+
+
+# Make the list of classes to scan an empty list, for this test only
+@mock.patch.object(OptionLineFactory, 'line_classes', [])
+def test_no_such_line_type():
+    factory = OptionLineFactory()
+    with pytest.raises(OptionLineError) as exc:
+        line_obj = factory.make_line("foo bar baz")
+    assert exc.value.message.startswith("Unknown line type for option line")
 
 
 def test_option_line_factory_from_text_block():
@@ -155,7 +168,7 @@ Mary had a little lamb
 """
     factory = OptionLineFactory()
     class_names = []
-    print(source_text.splitlines())
+    # print(source_text.splitlines())
     for source_line in source_text.rstrip().splitlines():
         line_obj = factory.make_line(source_line)
         class_names.append(line_obj.__class__.__name__)
@@ -247,15 +260,20 @@ urgency    :: 1 | 2 | 3
   [ ] Another final task
 """
     option_lines = OptionLines(source_text)
-    # print("=== Source ===")
-    # print(source_text.rstrip())
-    # print("=== Result ===")
-    # print(option_lines)
-    # print("==============")
     assert str(option_lines) == expected.rstrip()
     assert option_lines.lines[0] == "# This is a comment"
     assert option_lines.lines[1].startswith("importance")
     assert len(option_lines.lines) == 18
+
+
+def test_bad_task_line_sequence():
+    source_text = """\
+importance :: a | b | c
+Mary had a little lamb
+"""
+    with pytest.raises(OptionLineError) as exc:
+        option_lines = OptionLines(source_text)
+    assert exc.value.message.startswith("Bad task line sequence")
 
 
 def test_duplicate_option_keys_rejected():
@@ -350,7 +368,6 @@ supermarket  :: asda | m&s | morrisons | sainsburys | tesco
 urgency      :: sometime | this-month | this-week | today | tomorrow
 weather      :: fine | rain | showers"""
 
-
 def test_full_text_input_4():
     source_text = """\
 # Try out some tasks. Where should the comments be attached?
@@ -370,7 +387,7 @@ urgency      :: sometime | this-month | this-week | today | tomorrow
     option_lines = OptionLines(source_text)
     print(option_lines)
     assert str(option_lines) == source_text.rstrip()
-    # assert 0, 56
+
 
 def test_option_lines_check_is_option_subset_of():
     outer_text = """\
@@ -461,7 +478,7 @@ def test_cant_start_text_with_option_continuation_char():
     assert exc.value.message.startswith("Bad option line sequence")
 
 
-def test_handles_task_continuation_lines345():
+def test_handles_task_continuation_lines():
     source_text = """\
   [ ] Some task to-do
       More details of task
@@ -507,3 +524,20 @@ location :: banbury | isleworth
             | kings-sutton
             | south-bank-centre
             | whitnash"""
+
+
+def test_task_list_text_1b27():
+    source_text = """\
+  [x] Cancel BT line: Business line --> 0800 800152
+      Only 8-6, M-F. Need phone bill to hand.
+      Collect phone bill from Isleworth
+      [>] Cancel Zen Internet DD after 30 July
+          Foo bar
+  [ ] Contact Virgin Media, re transfer of broadband line
+* [ ] PythonPro VAT return
+  [ ] https://www.123-reg.co.uk/secure domains
+  [/] daily.co.uk domains
+"""
+    option_lines = OptionLines(source_text)
+    assert str(option_lines) == source_text.rstrip()
+

@@ -70,6 +70,7 @@ TO-DO after all working:
 [ ] When changing the order:
     [ ] Comments to stay with following line
     [ ] Blanks to stay with following line
+[ ] Make this a heading: Personal
 Next steps
 ==========
 """
@@ -77,6 +78,8 @@ Next steps
 import sys
 from abc import abstractmethod
 from pprint import pprint
+
+from pp.utils.tasksort import Task
 
 COMMENT_CHAR = '#'
 KEY_OPTIONS_SEPARATOR = '::'
@@ -90,8 +93,8 @@ TASK_STATUS_DICT = {
     ">": "later",
 }
 TASK_EMPHASIS_DICT = {
-    "": "non-urgent",
-    "*": "urgent",
+    "": "sometime",
+    "*": "this-week",
     "**": "today",
 }
 
@@ -179,9 +182,6 @@ class OptionLine(BaseOptionLine):
     All indents for options are cancelled.
     """
 
-    # def __init__(self, source_line=""):
-    #     super(OptionLine, self).__init__(source_line)
-    #     # self.max_key_length = 0  # Increases width of first column, if > 0
     option_join_str = " {} ".format(OPT_CONTIN_CHAR)
 
     def __init__(self, source_line=""):
@@ -237,8 +237,6 @@ class OptionLine(BaseOptionLine):
 
     def _wrap_options(self, max_option_length):
         """Split options into multiple strings to deal with long lists"""
-        ## if not max_option_length:
-        ##     max_option_length = sys.maxsize  # Python 3==> not sys.maxint
         result_lines = []
         current_line = []
         # current_length starts at -3 to allow for no leading separator
@@ -279,6 +277,9 @@ class TaskLine(BaseOptionLine):
         + [x] Contact agency re contract
     """
 
+    # def __init__(self):
+    #     self.task = Task()
+
     def validates(self):
         """Return True if the source_line, after parsing, has a task."""
         return bool(self.task_text)
@@ -296,6 +297,7 @@ class TaskLine(BaseOptionLine):
             emphasis, status = parts[0].strip().split("[")
             self.emphasis_chars = emphasis.strip()
             self.emphasis = TASK_EMPHASIS_DICT[self.emphasis_chars]
+            # self.task.urgency = self.emphasis
             self.status_ch = status.strip()
             self.status = TASK_STATUS_DICT[self.status_ch]
             self.task_text = parts[1].strip()
@@ -303,8 +305,9 @@ class TaskLine(BaseOptionLine):
             if not self.emphasis_chars:
                 # Avoid going negative if the initial indent is missing
                 self.indent = max(self.indent - 2, 0)
-            print(">>----{:15}{:3} ({}, {})".format(
-                self.task_text[:15], "...", self.emphasis, self.status))
+            # debug printing
+            print(">>----{:25}{:3} ({}, {})".format(
+                self.task_text[:25], "...", self.emphasis, self.status))
         except (ValueError, IndexError, KeyError):
             # ValueError if brackets are missing
             # IndexError if there is no parts[1], i.e. only parts[0]
@@ -371,7 +374,6 @@ class OptionLines(object):
         done (rather than just return T/F) to give the user some indication
         of what has gone wrong.
         """
-        # for key, inner_options in self.options.iteritems():
         for key in self.option_keys:
             inner_options = self.option_keys[key].options
             try:
@@ -399,10 +401,8 @@ class OptionLines(object):
         self.max_option_length = max_line_length - self.max_key_length - 4
 
         output_lines = []
-        # output_lines.append(">>>>>")
         for line_obj in self._obj_lines:
             output_lines.append(str(line_obj))
-        # output_lines.append("<<<<<")
         return "\n".join(output_lines)
 
     @property
@@ -410,9 +410,11 @@ class OptionLines(object):
         return self.format_text().splitlines()
 
     def _dump_line(self, label, line_obj):
-        return "[{} {}>>] {} ({})".format(label, line_obj.indent,
-                                          line_obj.text[:50],
-                                          line_obj.__class__.__name__)
+        return "[{} {}>>] {} ({}) prio=".format(label, line_obj.indent,
+                                                  line_obj.text[:50],
+                                                  line_obj.__class__.__name__,
+                                       #           line_obj.task.priority,
+                                                  )
 
     def parse_text(self, source_text):
         '''
@@ -431,7 +433,8 @@ class OptionLines(object):
         prev_line_obj = None
         for source_line in self.source_text.splitlines():
             line_obj = self.line_factory.make_line(source_line)
-            print(self._dump_line("A", line_obj))
+            # debug printing
+            # print(self._dump_line("A", line_obj))
             if isinstance(line_obj, OptionContinuationLine):
                 if (isinstance(prev_line_obj, OptionLine) or
                     isinstance(prev_line_obj, OptionContinuationLine)):
@@ -450,18 +453,14 @@ class OptionLines(object):
             else:
                 raw_lines.append(line_obj)
                 prev_line_obj = line_obj
-        print('/1' * 35)
         for obj1 in raw_lines:
+            # debug printing
             print(self._dump_line("B", obj1))
             for cont_line in obj1.continuation_line_objs:
                 cont_line.indent = obj1.indent + cont_line.indent_extra
-                print("---+++---{}".format(str(cont_line)))
-            ##cont_lines_text = [cont_line.text
             cont_lines_text = [str(cont_line)
                                for cont_line in obj1.continuation_line_objs]
             complete_text = "\n".join([obj1.text] + cont_lines_text)
-            print("-" * 45 + " Input text")
-            print(complete_text)
             line_obj2 = self.line_factory.make_line(complete_text)
             line_obj2.indent = obj1.indent
             self._obj_lines.append(line_obj2)
@@ -469,47 +468,7 @@ class OptionLines(object):
                 self._check_for_option_duplication(line_obj2)
             elif isinstance(line_obj2, TaskLine):
                 self.tasks.append(line_obj2)
-            print("{} Output text, plus {} spaces indent".format(
-                "-" * 45, line_obj2.indent))
-            print(line_obj2.text)
-            print("." * 75)
-        print('\\2' * 35)
-
-        # def _process_buffer(self, buffer_lines):
-        #      if buffer_lines is None:
-        #          return  # First time called
-        #      complete_line = ''.join(buffer_lines)
-        #      line_obj = self.line_factory.make_line(complete_line)
-        #      self._obj_lines.append(line_obj)
-        #      if isinstance(line_obj, OptionLine):
-        #          self._check_for_option_duplication(line_obj)
-        # # self.parse_text0(source_text)
-        # complete_line = "\n".join()
-
         self._calc_maximum_key_length()
-
-    # def parse_text0(self, source_text):
-    #     self._clear_data()
-    #     self.source_text = source_text.rstrip()
-
-    #     for source_line in self.source_text.splitlines():
-    #         line_obj = OptionLineFactory()
-    #     # source_lines_gen = (line.strip()
-    #     #                     for line in self.source_text.splitlines())
-    #     buffer_lines = None
-    #     for source_line in self.source_text.splitlines():
-    #         if source_line.lstrip().startswith(OPT_CONTIN_CHAR):
-    #             if not buffer_lines:
-    #                 msg = "You can't start text with '{}': {}"
-    #                 raise OptionLineError(msg.format(OPT_CONTIN_CHAR,
-    #                                                  source_line))
-    #             buffer_lines.append(source_line.rstrip())
-    #         else:
-    #             # Current is non-continuation line, so process buffer_lines
-    #             self._process_buffer(buffer_lines)
-    #             buffer_lines = [source_line.rstrip()]
-    #     self._process_buffer(buffer_lines)
-    #     self._calc_maximum_key_length()
 
     def _calc_maximum_key_length(self):
         """Each line objects needs to know the maximum key length from all
@@ -517,10 +476,7 @@ class OptionLines(object):
         try:
             self.max_key_length = max(len(key)
                                       for key in self.option_keys.keys())
-            # for line_obj in self.option_keys.values():
-            #     line_obj.max_key_length = self.max_key_length
         except ValueError:
-            # self.option_keys may be an empty dictionary
             self.max_key_length = 0
 
     def _check_for_option_duplication(self, line_obj):
@@ -545,13 +501,3 @@ class OptionLines(object):
         self._obj_lines = []
         self.option_keys = {}
         self.all_options = {}
-
-    def _process_buffer(self, buffer_lines):
-        if buffer_lines is None:
-            return  # First time called
-        complete_line = ''.join(buffer_lines)
-        line_obj = self.line_factory.make_line(complete_line)
-        self._obj_lines.append(line_obj)
-        if isinstance(line_obj, OptionLine):
-            self._check_for_option_duplication(line_obj)
-
